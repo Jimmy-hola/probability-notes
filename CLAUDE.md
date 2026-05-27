@@ -141,8 +141,8 @@ HTML 是**原書內容的忠實互動化**,不是「我重新設計一個教學�
 | 章 | 節 | 標題 | 狀態 | 檔案 |
 |---|---|---|---|---|
 | 2 | 2.1 | The importance of thinking conditionally | ✅ 完成 | `Blitzstein/ch02/2-1.html` |
-| 2 | 2.2 | Definition and intuition | ⏳ 下一個 | (待產) |
-| 2 | 2.3 | Bayes' rule and the law of total probability | – | |
+| 2 | 2.2 | Definition and intuition | ✅ 完成 | `Blitzstein/ch02/2-2.html` |
+| 2 | 2.3 | Bayes' rule and the law of total probability | ⏳ 下一個 | (待產) |
 | 2 | 2.4 | Conditional probabilities are probabilities | – | |
 | 2 | 2.5 | Independence of events | – | |
 | 2 | 2.6 | Coherency of Bayes' rule | – | |
@@ -179,12 +179,49 @@ HTML 是**原書內容的忠實互動化**,不是「我重新設計一個教學�
 
 ---
 
-## 10. 換電腦快速啟動(給未來的我自己)
+## 10. 多 session / 多電腦工作流(重要)
 
-1. 同步整個 `~/Documents/claude 學習/` 資料夾(iCloud / Dropbox / git)
-2. 新機:`brew install poppler`
-3. 新機:`cd ~/Documents/claude 學習/` 開 Claude Code
-4. 告訴 Claude:「繼續做下一節」 — 他會自動讀這份 `CLAUDE.md` 取得完整上下文 + 進度
-5. Claude 應該回報:「目前進度:§2.1 完成,下一節是 §2.2 Definition and intuition,我現在去讀 PDF 那幾頁,然後直接寫 `Blitzstein/ch02/2-2.html`。」
+### 真相來源(Source of Truth)
+**GitHub repository 是這個專案的家**:https://github.com/Jimmy-hola/probability-notes
+
+- 任何電腦、任何 session 都從 GitHub `git clone` / `git pull` 取得最新狀態
+- Google Drive 已退役(只當第二層備份,可選)
+- PDF 原書檔案**不在 git 裡**(`.gitignore` 排除),需獨立放在工作電腦上
+
+### 進度同步協定(處理多 session/多電腦的不一致)
+
+**每個新 session 開頭,AI 必須先做這三件事:**
+
+1. `git pull` — 拿到最新狀態
+2. 讀 §7 進度表
+3. `ls Blitzstein/ch??/` — 確認檔案系統實際狀態
+4. **若進度表與檔案系統不一致 → 以檔案系統為準**,並更新進度表
+
+**每完成一節後,AI 必須做這三件事(同一個 commit 內):**
+
+1. 更新本檔(§7 進度表)— 該節改 ✅,下一節改 ⏳
+2. 更新 `Blitzstein/index.html` — 該卡片改 `badge-done` 並啟用連結;下一節改 `badge-next`
+3. `git add -A && git commit -m "Add §X.Y"`(commit 但**先不 push**)
+4. 等使用者驗證滿意 → 使用者說「推一下」/「push」/「推上去」→ 才 `git push`
+
+### 換電腦快速啟動
+
+```bash
+# 第一次在新電腦(包含公司電腦):
+git clone https://github.com/Jimmy-hola/probability-notes.git
+cd probability-notes
+brew install poppler   # macOS;其他系統用對應 PDF 工具
+# 把 PDF 放進這個資料夾(從原電腦複製或 Drive 抓)
+```
+
+之後告訴 Claude:「**繼續做下一節**」 — 他會 `git pull` → 讀 CLAUDE.md → 掃資料夾 → 推斷下一節 → 開工。
+
+### 給未來 Claude 的開場 SOP
+
+新 session 進來,**第一條訊息**應該回:
+
+> 「我先 `git pull`,然後讀 CLAUDE.md + 掃 `Blitzstein/ch??/`,確認最新進度後再開始。」
+
+實際執行:`git pull && ls Blitzstein/ch*/` → 對照 §7 → 必要時更新 → 開始做下一節。
 
 如果新的 Claude 沒有照這個 SOP 走,就把這份檔案的網址丟給他、要求他重讀。
