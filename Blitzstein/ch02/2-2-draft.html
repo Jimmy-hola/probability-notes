@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2.1 Conditional Probability — Blitzstein & Hwang 互動學習</title>
+
+<!-- MathJax 3 -->
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath: [['$', '$'], ['\\(', '\\)']],
+      displayMath: [['$$', '$$'], ['\\[', '\\]']]
+    },
+    svg: { fontCache: 'global' }
+  };
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+<style>
+  :root {
+    --bg: #fafaf7;
+    --surface: #ffffff;
+    --surface-2: #f1f0ea;
+    --text: #1f2024;
+    --muted: #6a6f78;
+    --primary: #0a6cff;
+    --primary-soft: #e7f0ff;
+    --accent: #d96f1f;
+    --good: #1f9d55;
+    --warn: #c0392b;
+    --border: #e3e1d8;
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 4px 14px rgba(0,0,0,.04);
+    --radius: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #15171b;
+      --surface: #1e2127;
+      --surface-2: #262a31;
+      --text: #e6e7ea;
+      --muted: #9aa0aa;
+      --primary: #6aa3ff;
+      --primary-soft: #1d2a44;
+      --accent: #f0a26a;
+      --good: #66d29a;
+      --warn: #f08278;
+      --border: #2e323a;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.3);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC",
+                 "Noto Sans CJK TC", "Microsoft JhengHei", Helvetica, Arial, sans-serif;
+    line-height: 1.7;
+    font-size: 16px;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 28px 22px 80px; }
+
+  header.hero {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 18px; margin-bottom: 26px;
+  }
+  header.hero .crumb { color: var(--muted); font-size: 14px; letter-spacing: .04em; }
+  header.hero h1 { margin: 6px 0 4px; font-size: 28px; line-height: 1.3; }
+  header.hero .subtitle { color: var(--muted); font-size: 15px; }
+
+  nav.toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    margin-bottom: 28px;
+    box-shadow: var(--shadow);
+    font-size: 15px;
+  }
+  nav.toc strong { display:block; color: var(--muted); font-size: 12px; letter-spacing: .12em;
+    text-transform: uppercase; margin-bottom: 8px; font-weight: 600; }
+  nav.toc ol { margin: 0; padding-left: 22px; }
+  nav.toc li { margin: 4px 0; }
+  nav.toc a { color: var(--primary); text-decoration: none; }
+  nav.toc a:hover { text-decoration: underline; }
+
+  section.block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px 24px;
+    margin-bottom: 26px;
+    box-shadow: var(--shadow);
+  }
+  section.block h2 {
+    margin: 0 0 14px;
+    font-size: 21px;
+    display: flex; align-items: baseline; gap: 10px;
+  }
+  section.block h2 .badge {
+    font-size: 12px; color: var(--muted); font-weight: 500; letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+  section.block h3 { margin: 22px 0 10px; font-size: 17px; }
+  section.block p, section.block li { color: var(--text); }
+  section.block ul, section.block ol { padding-left: 22px; }
+
+  .callout {
+    background: var(--surface-2);
+    border-left: 3px solid var(--primary);
+    padding: 12px 14px;
+    border-radius: 8px;
+    margin: 12px 0;
+    font-size: 15px;
+  }
+  .callout.warn { border-left-color: var(--warn); }
+  .callout.good { border-left-color: var(--good); }
+
+  /* Socratic question card */
+  .qcard {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin: 14px 0;
+  }
+  .qcard .qhead {
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 600; margin-bottom: 8px;
+  }
+  .qcard .qnum {
+    background: var(--primary);
+    color: white;
+    border-radius: 999px;
+    width: 26px; height: 26px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 13px;
+  }
+  .qcard .qtext { margin: 6px 0 10px; }
+  details {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0;
+    margin: 8px 0;
+    background: var(--surface);
+  }
+  details > summary {
+    cursor: pointer;
+    padding: 10px 14px;
+    font-weight: 500;
+    list-style: none;
+    user-select: none;
+    border-radius: 8px;
+  }
+  details > summary::-webkit-details-marker { display: none; }
+  details > summary::before {
+    content: '▸';
+    display: inline-block;
+    margin-right: 8px;
+    transition: transform .15s ease;
+    color: var(--muted);
+  }
+  details[open] > summary::before { transform: rotate(90deg); }
+  details > .details-body {
+    padding: 4px 16px 14px;
+    border-top: 1px solid var(--border);
+  }
+  details.hint > summary { color: var(--accent); }
+  details.answer > summary { color: var(--good); }
+
+  /* Visualization */
+  .viz {
+    background: var(--surface-2);
+    border-radius: 10px;
+    padding: 16px;
+    margin: 14px 0;
+  }
+  .viz-row {
+    display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start;
+  }
+  .viz-canvas-wrap {
+    flex: 0 1 auto;
+    display: flex; justify-content: center;
+  }
+  #pebble-canvas {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    width: 100%; max-width: 420px;
+    height: auto; aspect-ratio: 1 / 1;
+    display: block;
+  }
+  .viz-controls { flex: 1 1 240px; min-width: 220px; }
+  .viz-controls .group { margin-bottom: 16px; }
+  .viz-controls .group-label {
+    font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 6px; font-weight: 600;
+  }
+  .viz-controls button {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 10px;
+    margin: 3px 4px 3px 0;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: inherit;
+  }
+  .viz-controls button:hover { border-color: var(--primary); }
+  .viz-controls button.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+  }
+  .viz-readout {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-top: 14px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .viz-readout .formula { color: var(--primary); }
+  .viz-legend {
+    display: flex; gap: 14px; flex-wrap: wrap;
+    font-size: 13px; color: var(--muted);
+    margin-top: 10px;
+  }
+  .viz-legend span::before {
+    content: '●'; margin-right: 4px; font-size: 16px; vertical-align: -2px;
+  }
+  .lg-out::before { color: #cfcfcf; }
+  .lg-b::before { color: #4a90e2; }
+  .lg-ab::before { color: #1f9d55; }
+
+  /* Checklist */
+  .checklist { list-style: none; padding: 0; }
+  .checklist li {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 8px 10px; margin: 4px 0;
+    background: var(--surface-2);
+    border-radius: 8px;
+  }
+  .checklist input[type=checkbox] {
+    margin-top: 5px; transform: scale(1.2); accent-color: var(--good);
+  }
+  .checklist label { flex: 1; cursor: pointer; }
+
+  footer {
+    margin-top: 36px; padding-top: 18px;
+    border-top: 1px solid var(--border);
+    color: var(--muted); font-size: 13px; text-align: center;
+  }
+  code { background: var(--surface-2); padding: 1px 6px; border-radius: 4px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .92em; }
+
+  @media (max-width: 560px) {
+    .wrap { padding: 18px 14px 60px; }
+    header.hero h1 { font-size: 22px; }
+    section.block { padding: 16px 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <div class="crumb">Chapter 2 · Conditional Probability</div>
+  <h1>2.1 Conditional probability</h1>
+  <div class="subtitle">在 B 已發生的條件下,A 還有多少機率? — 從 Pebble World 重新發現條件機率的定義。</div>
+</header>
+
+<nav class="toc" aria-label="目錄">
+  <strong>本節導覽</strong>
+  <ol>
+    <li><a href="#goals">學習目標 & 前置檢查</a></li>
+    <li><a href="#socratic">蘇格拉底鏈(6 步推導)</a></li>
+    <li><a href="#viz">Pebble World 互動視覺化</a></li>
+    <li><a href="#principles">關鍵原則 & 常見誤區</a></li>
+    <li><a href="#selftest">自我檢驗題</a></li>
+    <li><a href="#checklist">進度 checklist</a></li>
+  </ol>
+</nav>
+
+<!-- ========== 1. GOALS & PRE-CHECK ========== -->
+<section class="block" id="goals">
+  <h2>① 學習目標 <span class="badge">Goals</span></h2>
+  <p>讀完本節,你應該能不假思索地回答:</p>
+  <ul>
+    <li>條件機率 $P(A \mid B)$ 的定義是什麼?為什麼分母要除以 $P(B)$?</li>
+    <li>為什麼要求 $P(B) &gt; 0$?</li>
+    <li>怎麼用 multiplication rule 把 $P(A \cap B)$ 拆成兩個易算的量?</li>
+    <li>$P(A \mid B)$ 與 $P(B \mid A)$ 是同一回事嗎?差在哪裡?</li>
+    <li>條件機率在 Pebble World 裡的幾何意義是什麼?</li>
+  </ul>
+
+  <h3>前置檢查(快速 self-check)</h3>
+  <div class="qcard">
+    <div class="qtext"><strong>Q0-1.</strong> 等機率有限樣本空間 $\Omega$ 下,事件 $E$ 的機率怎麼算?</div>
+    <details class="answer"><summary>展開答案</summary>
+      <div class="details-body">$P(E) = |E| / |\Omega|$ — 第 1.3 節 naive definition。本節會「在縮限樣本空間到 B」之後再套這個直覺。</div>
+    </details>
+  </div>
+  <div class="qcard">
+    <div class="qtext"><strong>Q0-2.</strong> 對任何兩個事件 $A, B$,$A \cap B$ 與 $A \cup B$ 哪一個一定比較「小」(機率較低)?</div>
+    <details class="answer"><summary>展開答案</summary>
+      <div class="details-body">$P(A \cap B) \le \min(P(A), P(B)) \le P(A \cup B)$。intuition:「同時發生」比「擇一發生」更嚴格。<br>
+      這個直覺很重要 — 條件機率的分子永遠是 $P(A \cap B)$。</div>
+    </details>
+  </div>
+  <div class="qcard">
+    <div class="qtext"><strong>Q0-3.</strong> 想像你丟一顆公正六面骰。事件 $A=\{$點數為 3$\}$、$B=\{$點數為奇數$\}$。$P(A)=?$、$P(B)=?$、$P(A \cap B)=?$</div>
+    <details class="answer"><summary>展開答案</summary>
+      <div class="details-body">$P(A)=1/6$、$P(B)=3/6=1/2$、$A \cap B = A$,所以 $P(A \cap B) = 1/6$。記住這三個數字 — 等下會用。</div>
+    </details>
+  </div>
+</section>
+
+<!-- ========== 2. SOCRATIC CHAIN ========== -->
+<section class="block" id="socratic">
+  <h2>② 蘇格拉底鏈 <span class="badge">Build the definition</span></h2>
+  <p>下面 6 題會帶你從一個具體例子,一步步「逼出」條件機率的定義。每題請先試著自己想 1–2 分鐘,再展開提示或解答。</p>
+
+  <!-- Q1 -->
+  <div class="qcard">
+    <div class="qhead"><span class="qnum">1</span> 縮限樣本空間</div>
+    <div class="qtext">丟兩顆公正的骰子(顏色不同,可分辨先後)。<strong>已知兩顆點數和等於 7</strong>,問「第一顆是 3」的機率是多少?</div>
+    <details class="hint"><summary>💡 提示</summary>
+      <div class="details-body">列出所有「和為 7」的結果(順序對 = (第一顆, 第二顆))。在這些結果中,有多少個第一顆是 3?</div>
+    </details>
+    <details class="answer"><summary>✅ 解答 + 為什麼</summary>
+      <div class="details-body">
+        和為 7 的 outcomes 有 6 個:$(1,6),(2,5),(3,4),(4,3),(5,2),(6,1)$,共 6 個。
+        其中「第一顆 = 3」只有 $(3,4)$ 一個,所以條件機率 $= 1/6$。
+        <div class="callout">注意:這恰好等於「無條件下第一顆 = 3」的機率 $1/6$ — 純屬巧合。下一題我們換條件就會看到差別。</div>
+      </div>
+    </details>
+  </div>
+
+  <!-- Q2 -->
+  <div class="qcard">
+    <div class="qhead"><span class="qnum">2</span> 換個條件,結果就不同</div>
+    <div class="qtext">改成<strong>已知兩顆點數和為 4</strong>,問「第一顆是 3」的機率是多少?跟 Q1 對照,為什麼有時「知道 B」改變了 A 的機率、有時不改?</div>
+    <details class="hint"><summary>💡 提示</summary>
+      <div class="details-body">和為 4 只有 3 個 outcomes。在這 3 個之中第一顆是 3 的有幾個?算出比例後,再回頭問自己:「條件改變機率的本質是什麼?」</div>
+    </details>
+    <details class="answer"><summary>✅ 解答 + 為什麼</summary>
+      <div class="details-body">
+        和為 4:$(1,3),(2,2),(3,1)$,共 3 個。其中第一顆 = 3 的只有 $(3,1)$。所以 $P = 1/3$,跟無條件的 $1/6$ 不一樣。
+        <p><strong>本質</strong>:條件 $B$ 把樣本空間從 36 個 outcomes <em>縮限</em>到 $|B|$ 個,然後在這個小空間裡重新看 $A$ 佔多少比例。
+        有時這個比例剛好等於原本的 $P(A)$(Q1),有時不等於(Q2) — 是否相等,後續會用「<em>獨立性</em>」這個概念精確刻畫(§2.4)。</p>
+      </div>
+    </details>
+  </div>
+
+  <!-- Q3 -->
+  <div class="qcard">
+    <div class="qhead"><span class="qnum">3</span> 從直覺寫出定義</div>
+    <div class="qtext">把 Q1、Q2 的算法一般化:在縮限樣本空間到 $B$ 之後,$A$ 在新空間中所佔的「機率比例」是什麼?<br>
+    試著寫出 $P(A \mid B)$ 的<strong>定義式</strong>,並回答:為什麼分子是 $P(A \cap B)$ 而不是 $P(A)$?</div>
+    <details class="hint"><summary>💡 提示</summary>
+      <div class="details-body">在縮限後的 $B$ 中,$A$ 中那些「不在 B 裡」的 outcomes 還有可能發生嗎?</div>
+    </details>
+    <details class="answer"><summary>✅ 解答 + 為什麼</summary>
+      <div class="details-body">
+        <strong>Definition 2.1.1 (Blitzstein & Hwang):</strong>
+        $$P(A \mid B) = \dfrac{P(A \cap B)}{P(B)}, \quad \text{provided } P(B) &gt; 0.$$
+        <p><strong>為什麼分子是 $P(A \cap B)$:</strong>一旦你「知道 B 發生了」,$\Omega$ 裡所有<em>不在 B</em> 的 pebbles 全部被剔除。
+        在剩下的 pebbles 中,讓 $A$ 也成立的,只剩 $A \cap B$ 這一塊。
+        所以條件下「A 占多少比例」就是 $\frac{P(A \cap B)}{P(B)}$ — 分母是新樣本空間的總質量,用來把比例「重新正規化」回 $[0,1]$。</p>
+        <p class="callout good"><strong>兩個操作要記牢:</strong>(1) <em>縮限</em> sample space 到 B;(2) <em>重新正規化</em> 除以 $P(B)$。
+        這個雙步驟結構在後面的 Bayes、conditional independence、條件期望都會反覆出現。</p>
+      </div>
+    </details>
+  </div>
+
+  <!-- Q4 -->
+  <div class="qcard">
+    <div class="qhead"><span class="qnum">4</span> 為什麼要求 $P(B) &gt; 0$?</div>
+    <div class="qtext">定義中明確寫了 $P(B) &gt; 0$。如果 $P(B) = 0$,$P(A \mid B)$ 為什麼不能直接定義?有什麼直覺與技術理由?</div>
+    <details class="hint"><summary>💡 提示</summary>
+      <div class="details-body">先看數學上會發生什麼:$0/0$ 是?再看直覺:「在不可能發生的事的條件下」這句話有意義嗎?</div>
+    </details>
+    <details class="answer"><summary>✅ 解答 + 為什麼</summary>
+      <div class="details-body">
+        <strong>技術上</strong>:分母為 0,$P(A \cap B)/P(B)$ 沒有定義(且 $A \cap B \subseteq B$ 必有 $P(A \cap B)=0$,得 $0/0$)。
+        <strong>直覺上</strong>:條件機率回答的是「假設 B 真的發生了,A 的機率是多少」 — 若 B 是不可能事件,這個假設本身就矛盾。
+        <p>不過進階機率(measure theory)中,常常需要對 $P(B)=0$ 的事件條件化(例如連續隨機變數 $X=x$ 的條件分布,因為單點機率為 0)。
+        那時要用 <em>regular conditional probability</em> / Radon–Nikodym 導出的版本來處理。本書 §9 之後會碰到雛形。</p>
+      </div>
+    </details>
+  </div>
+
+  <!-- Q5 -->
+  <div class="qcard">
+    <div class="qhead"><span class="qnum">5</span> 反推 Multiplication Rule</div>
+    <div class="qtext">從定義 $P(A \mid B) = P(A \cap B)/P(B)$ 兩邊乘 $P(B)$,你得到什麼?<br>
+    這個重寫版本在實務建模時為什麼<strong>比定義本身更有用</strong>?嘗試講出兩個原因。</div>
+    <details class="hint"><summary>💡 提示</summary>
+      <div class="details-body">想像你在描述一個「按時間順序」展開的隨機過程:先發生某事 B,後續才有 A。那麼模型自然會給你 $P(B)$ 與 $P(A \mid B)$,而不是 $P(A \cap B)$。</div>
+    </details>
+    <details class="answer"><summary>✅ 解答 + 為什麼</summary>
+      <div class="details-body">
+        <p><strong>Multiplication rule (Theorem 2.1.2):</strong>
+        $$P(A \cap B) = P(B) \cdot P(A \mid B) = P(A) \cdot P(B \mid A).$$</p>
+        <p><strong>為什麼比定義更有用:</strong></p>
+        <ol>
+          <li><strong>順著建模方向走</strong>:很多隨機過程是「逐步揭露」的(先抽第一張牌,再抽第二張;先生病,再做檢測)。
+          模型自然提供 $P(\text{第一步})$ 與 $P(\text{第二步} \mid \text{第一步})$;multiplication rule 直接給 joint。</li>
+          <li><strong>可以鏈式推廣</strong>:對 $n$ 個事件,
+          $$P(A_1 \cap A_2 \cap \cdots \cap A_n) = P(A_1) \, P(A_2 \mid A_1) \, P(A_3 \mid A_1 \cap A_2) \cdots P(A_n \mid A_1 \cap \cdots \cap A_{n-1}).$$
+          這就是 chain rule,Bayes nets / 機率圖模型的基礎。</li>
+        </ol>
+        <p class="callout">定義是「分析工具」(把 conditional 拆成 joint/marginal),multiplication rule 是「綜合工具」(把 marginal/conditional 組成 joint)。學會雙向流暢轉換,後面條件機率的計算就會像呼吸一樣自然。</p>
+      </div>
+    </details>
+  </div>
+
+  <!-- Q6 -->
+  <div class="qcard">
+    <div class="qhead"><span class="qnum">6</span> $P(A \mid B)$ vs $P(B \mid A)$ — 並從中看見 Bayes</div>
+    <div class="qtext">用「有病 vs 檢測陽性」的場景,說明 $P(A \mid B)$ 與 $P(B \mid A)$ 為何不能互換。<br>
+    更進一步:把這兩個式子串起來(都用 multiplication rule 表達 $P(A \cap B)$),你會得到什麼公式?</div>
+    <details class="hint"><summary>💡 提示</summary>
+      <div class="details-body">$P(A \mid B) \cdot P(B) = P(A \cap B) = P(B \mid A) \cdot P(A)$。把中間的 $P(A \cap B)$ 去掉,解出 $P(A \mid B)$。</div>
+    </details>
+    <details class="answer"><summary>✅ 解答 + 為什麼</summary>
+      <div class="details-body">
+        <p>令 $A = \{\text{有病}\}$、$B = \{\text{檢測陽性}\}$。</p>
+        <ul>
+          <li>$P(B \mid A)$ = 「有病的人檢測呈陽性」的機率 = <em>敏感度(sensitivity)</em>,通常很高,例如 0.99。</li>
+          <li>$P(A \mid B)$ = 「檢測陽性的人實際有病」的機率 = <em>陽性預測值(PPV)</em>,在罕見病的場景可能只有 0.10 甚至更低。</li>
+        </ul>
+        <p><strong>兩者差很多!</strong>混淆它們就是著名的 <em>base rate fallacy / prosecutor's fallacy</em>。</p>
+        <p>把 multiplication rule 雙向寫:
+        $$P(A \mid B) \, P(B) = P(A \cap B) = P(B \mid A) \, P(A).$$
+        解出 $P(A \mid B)$:
+        $$\boxed{\, P(A \mid B) = \dfrac{P(B \mid A) \, P(A)}{P(B)} \,}$$
+        這就是 <strong>Bayes' rule</strong> 的最原始形式 — 我們已經把它<em>偷偷</em>從 2.1 的定義裡推出來了!§2.2 會把 $P(B)$ 用 law of total probability 進一步展開,完成完整版本。</p>
+        <p class="callout good"><strong>關鍵 takeaway:</strong>條件機率不對稱。「給定 B 看 A」和「給定 A 看 B」是兩件事,中間靠 prior $P(A)$ 與 marginal $P(B)$ 換算。
+        這個「<em>翻轉條件方向</em>」的能力,就是貝氏推論的核心。</p>
+      </div>
+    </details>
+  </div>
+</section>
+
+<!-- ========== 3. VISUALIZATION ========== -->
+<section class="block" id="viz">
+  <h2>③ Pebble World 互動視覺化 <span class="badge">See it</span></h2>
+  <p>把兩顆骰子的 36 種結果想成 36 顆 pebble(每顆機率 $1/36$)。
+  選一個事件 $B$ — 不在 $B$ 的 pebble 會變灰(被「縮限掉」);選一個事件 $A$ — $A \cap B$ 的 pebble 會亮起綠色。
+  下面會即時算出 $P(A \mid B) = |A \cap B|/|B|$。<strong>動手玩:換不同的 $A$、$B$,看哪些情況下條件改變了機率,哪些沒有。</strong></p>
+
+  <div class="viz">
+    <div class="viz-row">
+      <div class="viz-canvas-wrap">
+        <canvas id="pebble-canvas" width="420" height="420" aria-label="Pebble World 視覺化"></canvas>
+      </div>
+      <div class="viz-controls">
+        <div class="group">
+          <div class="group-label">事件 B(條件)</div>
+          <div id="b-buttons"></div>
+        </div>
+        <div class="group">
+          <div class="group-label">事件 A(目標)</div>
+          <div id="a-buttons"></div>
+        </div>
+        <div class="viz-readout" id="viz-readout"></div>
+        <div class="viz-legend">
+          <span class="lg-out">不在 B(已剔除)</span>
+          <span class="lg-b">在 B 但不在 A</span>
+          <span class="lg-ab">在 A∩B(成立)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="callout">
+    <strong>建議實驗:</strong>
+    (a) 選 B = 「和 = 7」、A = 「第一顆 = 3」,看 $P(A \mid B)$ 與 $P(A)$ 是否相等 → 對應 Q1。<br>
+    (b) 改成 B = 「和 = 4」,觀察比例變化 → 對應 Q2。<br>
+    (c) 選 B = 「第一顆 = 偶數」、A = 「兩顆相等」,看條件如何改變 $A$ 的機率。<br>
+    (d) 選 A = B,$P(A \mid B)$ 應該永遠是 1 — 想想為什麼,並從定義驗證。
+  </p>
+</section>
+
+<!-- ========== 4. KEY PRINCIPLES & PITFALLS ========== -->
+<section class="block" id="principles">
+  <h2>④ 關鍵原則 & 常見誤區 <span class="badge">Lock it in</span></h2>
+
+  <h3>本節最重要的 3 件事</h3>
+  <ol>
+    <li><strong>條件機率 = 縮限 + 重新正規化</strong>。$P(A \mid B) = P(A \cap B)/P(B)$ 不是天上掉下來的公式 — 它就是「把 $\Omega$ 縮成 $B$,再算 $A$ 在新空間中的比例」。</li>
+    <li><strong>Multiplication rule 是建模利器</strong>。$P(A \cap B) = P(B) P(A \mid B) = P(A) P(B \mid A)$,可以鏈式展開到任意多個事件(chain rule)。</li>
+    <li><strong>條件機率本身仍是一個合法的 probability measure</strong>。固定 $B$ 後,$Q(\cdot) := P(\cdot \mid B)$ 滿足機率公理(non-negative、$Q(\Omega)=1$、$\sigma$-additivity)。這個事實 §2.3 會明寫,但現在心裡就要有這個影子 — 它讓我們在「條件下的世界」可以照常做所有機率運算。</li>
+  </ol>
+
+  <h3>常見誤區</h3>
+  <ul>
+    <li class="callout warn"><strong>方向混淆:</strong>把 $P(A \mid B)$ 當成 $P(B \mid A)$。
+    舉例:「99% 的恐怖份子在機場安檢會被攔下,所以被攔下的人 99% 是恐怖份子」 — <em>錯</em>,忽略了 prior(恐怖份子在旅客中極稀有)。</li>
+    <li class="callout warn"><strong>把條件當對稱:</strong>誤以為 $P(A \mid B) + P(A \mid B^c) = 1$。事實上是 $P(A \mid B) + P(A^c \mid B) = 1$(條件下仍是 measure)。</li>
+    <li class="callout warn"><strong>忘掉 $P(B) &gt; 0$:</strong>條件在 $P(B) = 0$ 的事件上,需要更進階的工具(regular conditional probability),不要硬套定義式。</li>
+    <li class="callout warn"><strong>把「縮限」做了但忘了「正規化」:</strong>例如算出 $|A \cap B|/|\Omega|$ 然後當成 $P(A \mid B)$ — 那只是 $P(A \cap B)$。要記得分母從 $|\Omega|$ 換成 $|B|$。</li>
+  </ul>
+</section>
+
+<!-- ========== 5. SELF-TEST ========== -->
+<section class="block" id="selftest">
+  <h2>⑤ 自我檢驗題 <span class="badge">Try it</span></h2>
+  <p>建議先紙筆推導,再展開對照。</p>
+
+  <div class="qcard">
+    <div class="qhead"><span class="qnum">A</span> 撲克牌</div>
+    <div class="qtext">從一副標準 52 張撲克牌中隨機<strong>不放回</strong>抽兩張。已知第一張是 ace,問第二張也是 ace 的機率?
+    請(1)直接用條件機率定義算;(2)再用 multiplication rule 反推 $P(\text{兩張都是 ace})$。</div>
+    <details class="answer"><summary>✅ 解答</summary>
+      <div class="details-body">
+        (1) 第一張是 ace 之後,牌堆剩 51 張、其中還有 3 張 ace。
+        $$P(A_2 \mid A_1) = \dfrac{3}{51} = \dfrac{1}{17}.$$
+        (2) 由 multiplication rule:
+        $$P(A_1 \cap A_2) = P(A_1) \cdot P(A_2 \mid A_1) = \dfrac{4}{52} \cdot \dfrac{3}{51} = \dfrac{12}{2652} = \dfrac{1}{221}.$$
+        <p><em>反思:</em>如果問「兩張都是 ace」我們是不是也能用 naive 數法 $\binom{4}{2}/\binom{52}{2}$?算算看會發現結果一樣 — 為什麼?(因為等機率有限空間下兩種方法等價。)</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="qcard">
+    <div class="qhead"><span class="qnum">B</span> Story proof:條件下的補事件</div>
+    <div class="qtext">證明 $P(A^c \mid B) = 1 - P(A \mid B)$。請用兩種方法:(i) 直接從定義,(ii) 用「條件機率本身也是 probability measure」這個觀點。</div>
+    <details class="answer"><summary>✅ 解答</summary>
+      <div class="details-body">
+        <p><strong>(i) 直接從定義:</strong>
+        $$P(A^c \mid B) = \dfrac{P(A^c \cap B)}{P(B)} = \dfrac{P(B) - P(A \cap B)}{P(B)} = 1 - \dfrac{P(A \cap B)}{P(B)} = 1 - P(A \mid B).$$
+        中間用到 $A^c \cap B = B \setminus (A \cap B)$ 且 $A \cap B \subseteq B$。</p>
+        <p><strong>(ii) Measure 觀點:</strong>令 $Q(\cdot) = P(\cdot \mid B)$。$Q$ 是合法 probability measure(§2.3 會證),所以對任何事件 $A$,$Q(A^c) = 1 - Q(A)$,即 $P(A^c \mid B) = 1 - P(A \mid B)$。</p>
+        <p class="callout good"><strong>為什麼這個 story proof 重要:</strong>它告訴你 — 一旦你建立了「條件下的世界」,所有原來在無條件機率裡學到的恆等式(de Morgan、inclusion-exclusion、Boole's inequality、…)<em>全部都能照搬</em>,只要把 $P$ 換成 $P(\cdot \mid B)$ 即可。這是巨大的 leverage。</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="qcard">
+    <div class="qhead"><span class="qnum">C</span> Monty Hall(條件機率版)</div>
+    <div class="qtext">三扇門,只有一扇後面有車,你的目標是選中車。流程:你先選 door 1;主持人(他知道車在哪)從剩下兩扇門中<strong>開一扇有山羊的</strong>;若兩扇都有山羊,他<em>等機率</em>挑一扇開。已知主持人開了 door 3(且後面確實是山羊),問「換到 door 2 會贏」的條件機率?</div>
+    <details class="hint"><summary>💡 提示</summary>
+      <div class="details-body">令 $C_i$ = 車在 door $i$,$H_3$ = 主持人開了 door 3。先寫 $P(C_i)$(都是 1/3),再寫 $P(H_3 \mid C_i)$ 對 $i=1,2,3$(注意 $C_3$ 時主持人不可能開 door 3)。最後用 Bayes 算 $P(C_2 \mid H_3)$。</div>
+    </details>
+    <details class="answer"><summary>✅ 解答</summary>
+      <div class="details-body">
+        <p>$P(C_1) = P(C_2) = P(C_3) = 1/3$。給定車的位置,主持人開 door 3 的條件機率:</p>
+        <ul>
+          <li>$P(H_3 \mid C_1) = 1/2$(主持人可開 door 2 或 3,等機率)</li>
+          <li>$P(H_3 \mid C_2) = 1$(主持人不能開有車的 door 2,也不能開你選的 door 1,只能開 door 3)</li>
+          <li>$P(H_3 \mid C_3) = 0$(他絕不開有車的門)</li>
+        </ul>
+        <p>用 multiplication rule 算 $P(H_3)$:
+        $$P(H_3) = \tfrac{1}{2}\cdot\tfrac{1}{3} + 1\cdot\tfrac{1}{3} + 0\cdot\tfrac{1}{3} = \tfrac{1}{2}.$$
+        Bayes:
+        $$P(C_2 \mid H_3) = \dfrac{P(H_3 \mid C_2) P(C_2)}{P(H_3)} = \dfrac{1 \cdot 1/3}{1/2} = \dfrac{2}{3}.$$
+        所以<strong>換門勝率 = 2/3</strong>;不換(車在 door 1)勝率 = 1/3。</p>
+        <p class="callout good"><strong>為什麼很多人直覺得是 1/2:</strong>他們把「兩扇門剩下」當成「等可能」,忽略了主持人開 door 3 這個動作<em>本身攜帶了關於車的位置的資訊</em>。
+        條件機率的核心 — 不只看「結果」,還要看「為什麼這個結果會被觀察到」。</p>
+      </div>
+    </details>
+  </div>
+</section>
+
+<!-- ========== 6. CHECKLIST ========== -->
+<section class="block" id="checklist">
+  <h2>⑥ 可以進到 §2.2 嗎? <span class="badge">Self-check</span></h2>
+  <p>(勾選會自動存到瀏覽器 localStorage,下次打開仍在)</p>
+  <ul class="checklist" id="check-list">
+    <li><input type="checkbox" id="c1"><label for="c1">我能用一句話講清楚「條件機率是縮限到 B 後,A 佔多少比例」這個直覺。</label></li>
+    <li><input type="checkbox" id="c2"><label for="c2">我能寫出 $P(A \mid B)$ 的定義,並解釋為什麼分子是 $P(A \cap B)$、分母是 $P(B)$、為什麼要求 $P(B) &gt; 0$。</label></li>
+    <li><input type="checkbox" id="c3"><label for="c3">我能在腦中自由切換 multiplication rule 與條件機率定義(雙向轉換)。</label></li>
+    <li><input type="checkbox" id="c4"><label for="c4">我能舉一個生活例子說明 $P(A \mid B) \ne P(B \mid A)$,並從 multiplication rule 推出 Bayes' rule 的初步形式。</label></li>
+    <li><input type="checkbox" id="c5"><label for="c5">我能用 Pebble World 圖向一個沒學過機率的人解釋條件機率,且能用 Monty Hall 例題向自己證明條件機率的反直覺力。</label></li>
+  </ul>
+  <p class="callout good" id="all-done" style="display:none;">🎉 全部勾完了!告訴 Claude「下一節」即可繼續到 §2.2 Bayes' rule and the law of total probability。</p>
+</section>
+
+<footer>
+  Blitzstein &amp; Hwang, <em>Introduction to Probability</em> · §2.1 · 互動式學習頁(Socratic + Pebble World 視覺化)
+</footer>
+
+</div>
+
+<script>
+// ========================================
+// Pebble World Visualization
+// ========================================
+(function() {
+  const canvas = document.getElementById('pebble-canvas');
+  const ctx = canvas.getContext('2d');
+  const readout = document.getElementById('viz-readout');
+
+  // Resize canvas to device pixel ratio for crisp rendering
+  function setupHiDPI() {
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { w: rect.width, h: rect.height };
+  }
+
+  // Event definitions: each is a function (i, j) -> boolean
+  // i = first die (1..6, x-axis), j = second die (1..6, y-axis)
+  const eventsB = [
+    { label: '和 = 7', fn: (i,j) => i+j === 7 },
+    { label: '和 = 4', fn: (i,j) => i+j === 4 },
+    { label: '和 ≤ 5', fn: (i,j) => i+j <= 5 },
+    { label: '第一顆 = 偶數', fn: (i,j) => i % 2 === 0 },
+    { label: '兩顆都 ≥ 4', fn: (i,j) => i >= 4 && j >= 4 },
+    { label: '全空間 Ω', fn: (i,j) => true },
+  ];
+  const eventsA = [
+    { label: '第一顆 = 3', fn: (i,j) => i === 3 },
+    { label: '兩顆相等', fn: (i,j) => i === j },
+    { label: '和為質數', fn: (i,j) => [2,3,5,7,11].includes(i+j) },
+    { label: '第一顆 ≥ 第二顆', fn: (i,j) => i >= j },
+    { label: '和 = 7', fn: (i,j) => i+j === 7 },
+  ];
+
+  let bIdx = 0, aIdx = 0;
+
+  function buildButtons(containerId, items, onClick, getActive) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    items.forEach((item, idx) => {
+      const btn = document.createElement('button');
+      btn.textContent = item.label;
+      btn.dataset.idx = idx;
+      if (idx === getActive()) btn.classList.add('active');
+      btn.addEventListener('click', () => {
+        onClick(idx);
+        container.querySelectorAll('button').forEach((b, i) => {
+          b.classList.toggle('active', i === idx);
+        });
+        draw();
+      });
+      container.appendChild(btn);
+    });
+  }
+
+  function draw() {
+    const { w, h } = setupHiDPI();
+    ctx.clearRect(0, 0, w, h);
+
+    const pad = 36;
+    const gridW = w - pad * 1.4;
+    const cell = gridW / 6;
+    const ox = pad;
+    const oy = pad * 0.9;
+
+    const Bfn = eventsB[bIdx].fn;
+    const Afn = eventsA[aIdx].fn;
+
+    let nB = 0, nAB = 0;
+
+    // Axis labels
+    ctx.fillStyle = getCss('--muted');
+    ctx.font = '12px -apple-system, "PingFang TC", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (let i = 1; i <= 6; i++) {
+      ctx.fillText(i.toString(), ox + (i - 0.5) * cell, oy - 14);
+    }
+    ctx.textAlign = 'right';
+    for (let j = 1; j <= 6; j++) {
+      ctx.fillText(j.toString(), ox - 8, oy + (j - 0.5) * cell);
+    }
+    // Axis titles
+    ctx.fillStyle = getCss('--muted');
+    ctx.font = '11px -apple-system, "PingFang TC", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('第一顆 →', ox + gridW / 2, oy - 28);
+    ctx.save();
+    ctx.translate(ox - 26, oy + gridW / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText('第二顆 →', 0, 0);
+    ctx.restore();
+
+    // Pebbles
+    for (let i = 1; i <= 6; i++) {
+      for (let j = 1; j <= 6; j++) {
+        const cx = ox + (i - 0.5) * cell;
+        const cy = oy + (j - 0.5) * cell;
+        const r = cell * 0.32;
+
+        const inB = Bfn(i, j);
+        const inA = Afn(i, j);
+        const inAB = inA && inB;
+        if (inB) nB++;
+        if (inAB) nAB++;
+
+        let fill, stroke;
+        if (!inB) {
+          fill = 'rgba(160,160,160,0.18)';
+          stroke = 'rgba(160,160,160,0.35)';
+        } else if (inAB) {
+          fill = '#1f9d55';
+          stroke = '#157a40';
+        } else {
+          fill = '#4a90e2';
+          stroke = '#2e6cb5';
+        }
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fillStyle = fill;
+        ctx.fill();
+        ctx.lineWidth = 1.2;
+        ctx.strokeStyle = stroke;
+        ctx.stroke();
+
+        // If in A but not in B, draw a thin dotted ring to show "would be in A in unconditional world"
+        if (inA && !inB) {
+          ctx.beginPath();
+          ctx.arc(cx, cy, r + 2, 0, Math.PI * 2);
+          ctx.setLineDash([2, 3]);
+          ctx.strokeStyle = 'rgba(31,157,85,0.6)';
+          ctx.lineWidth = 1.4;
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+      }
+    }
+
+    // Readout
+    const total = 36;
+    let nA = 0;
+    for (let i = 1; i <= 6; i++)
+      for (let j = 1; j <= 6; j++)
+        if (Afn(i, j)) nA++;
+
+    const pA = nA / total;
+    const pB = nB / total;
+    const pAB = nAB / total;
+    const pAgB = nB === 0 ? null : nAB / nB;
+
+    const fmt = (x) => x === null ? '—' : x.toFixed(4);
+    const frac = (a, b) => b === 0 ? '—' : `${a}/${b}`;
+
+    readout.innerHTML = `
+      <div>事件 A:<strong>${eventsA[aIdx].label}</strong> &nbsp;|&nbsp; 事件 B:<strong>${eventsB[bIdx].label}</strong></div>
+      <div style="margin-top:6px;">
+        |A| = ${nA},&nbsp; |B| = ${nB},&nbsp; |A∩B| = ${nAB}
+      </div>
+      <div style="margin-top:4px;">
+        P(A) = ${frac(nA, total)} ≈ ${fmt(pA)}<br>
+        P(B) = ${frac(nB, total)} ≈ ${fmt(pB)}<br>
+        P(A∩B) = ${frac(nAB, total)} ≈ ${fmt(pAB)}
+      </div>
+      <div class="formula" style="margin-top:8px; font-size:15px;">
+        P(A | B) = |A∩B| / |B| = ${frac(nAB, nB)} ≈ ${fmt(pAgB)}
+      </div>
+      <div style="margin-top:6px; color: var(--muted); font-size:12.5px;">
+        ${pAgB !== null && Math.abs(pAgB - pA) < 1e-9
+          ? '✨ P(A|B) = P(A) → 在這組事件下,知道 B 對 A 沒有資訊(這正是 §2.4 將定義的「獨立」)。'
+          : pAgB === null
+            ? '⚠️ P(B) = 0,條件機率未定義。'
+            : `Δ = P(A|B) − P(A) = ${(pAgB - pA).toFixed(4)} → 知道 B ${pAgB > pA ? '提高' : '降低'}了 A 的機率。`}
+      </div>
+    `;
+  }
+
+  function getCss(varName) {
+    return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+  }
+
+  buildButtons('b-buttons', eventsB,
+    (idx) => { bIdx = idx; },
+    () => bIdx);
+  buildButtons('a-buttons', eventsA,
+    (idx) => { aIdx = idx; },
+    () => aIdx);
+
+  // Initial draw (after fonts/MathJax may still be loading, but canvas doesn't depend on them)
+  window.addEventListener('load', draw);
+  window.addEventListener('resize', draw);
+  draw();
+})();
+
+// ========================================
+// Checklist persistence
+// ========================================
+(function() {
+  const KEY = 'blitzstein-2-1-checklist';
+  const checks = document.querySelectorAll('#check-list input[type=checkbox]');
+  const allDoneMsg = document.getElementById('all-done');
+
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch(e) {}
+
+  checks.forEach(cb => {
+    if (saved[cb.id]) cb.checked = true;
+    cb.addEventListener('change', () => {
+      saved[cb.id] = cb.checked;
+      localStorage.setItem(KEY, JSON.stringify(saved));
+      updateDoneState();
+    });
+  });
+
+  function updateDoneState() {
+    const allDone = Array.from(checks).every(cb => cb.checked);
+    allDoneMsg.style.display = allDone ? 'block' : 'none';
+  }
+  updateDoneState();
+})();
+
+// ========================================
+// Details persistence (remember open states)
+// ========================================
+(function() {
+  const KEY = 'blitzstein-2-1-details';
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch(e) {}
+
+  const allDetails = document.querySelectorAll('details');
+  allDetails.forEach((d, i) => {
+    const key = 'd' + i;
+    if (saved[key]) d.open = true;
+    d.addEventListener('toggle', () => {
+      saved[key] = d.open;
+      localStorage.setItem(KEY, JSON.stringify(saved));
+    });
+  });
+})();
+</script>
+</body>
+</html>

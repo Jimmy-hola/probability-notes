@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Introduction to Probability · 互動式自學</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Spline+Sans+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+
+  :root {
+    --bg: #0e1116;
+    --bg-soft: #161b22;
+    --panel: #1c232e;
+    --ink: #e8e2d4;
+    --ink-soft: #a9b1bd;
+    --ink-faint: #6b7480;
+    --line: #2a323d;
+    --accent: #d4663a;
+    --gold: #c9a227;
+    --good: #5fb87a;
+    --muted: #6b7480;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background:
+      radial-gradient(ellipse 80% 40% at 50% -5%, rgba(212,102,58,0.08), transparent 55%),
+      var(--bg);
+    color: var(--ink);
+    font-family: 'Noto Sans TC', sans-serif;
+    min-height: 100vh;
+    padding-bottom: 60px;
+  }
+
+  /* grain */
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 9999; mix-blend-mode: overlay;
+  }
+
+  .wrap { max-width: 680px; margin: 0 auto; padding: 0 20px; }
+
+  /* header */
+  .site-header {
+    padding: 52px 0 36px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 36px;
+  }
+  .eyebrow {
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.75rem;
+    letter-spacing: 0.3em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 14px;
+  }
+  .site-header h1 {
+    font-family: 'Newsreader', serif; font-weight: 500;
+    font-size: clamp(1.8rem, 5vw, 2.6rem); line-height: 1.15;
+    margin-bottom: 8px;
+  }
+  .site-header .sub {
+    color: var(--ink-soft); font-size: 0.97rem; margin-top: 10px;
+  }
+  .site-header .sub em { color: var(--gold); font-style: normal; }
+
+  /* chapter group */
+  .chapter { margin-bottom: 32px; }
+  .chapter-label {
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.72rem;
+    letter-spacing: 0.25em; text-transform: uppercase;
+    color: var(--ink-faint); margin-bottom: 12px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .chapter-label::after {
+    content: ""; flex: 1; height: 1px; background: var(--line);
+  }
+  .chapter-title {
+    font-family: 'Newsreader', serif; font-size: 1.15rem;
+    color: var(--ink-soft); margin-bottom: 14px; padding-left: 2px;
+  }
+
+  /* section cards */
+  .sections { display: flex; flex-direction: column; gap: 10px; }
+  .sec-card {
+    display: flex; align-items: center; gap: 0;
+    background: var(--bg-soft); border: 1px solid var(--line);
+    border-radius: 12px; overflow: hidden;
+    text-decoration: none; color: inherit;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .sec-card:hover, .sec-card:active { border-color: var(--accent); background: var(--panel); }
+
+  .sec-num {
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.82rem;
+    color: var(--accent); background: rgba(212,102,58,0.08);
+    padding: 18px 16px; min-width: 64px; text-align: center;
+    border-right: 1px solid var(--line); flex-shrink: 0;
+    align-self: stretch; display: flex; align-items: center; justify-content: center;
+  }
+  .sec-body { padding: 16px 18px; flex: 1; }
+  .sec-en {
+    font-family: 'Newsreader', serif; font-size: 1.05rem;
+    color: var(--ink); line-height: 1.3; margin-bottom: 4px;
+  }
+  .sec-zh { font-size: 0.85rem; color: var(--ink-faint); }
+
+  .sec-badge {
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.68rem;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 3px 9px; border-radius: 20px; margin-right: 14px;
+    flex-shrink: 0; align-self: center;
+  }
+  .badge-done { background: rgba(95,184,122,0.12); color: var(--good); border: 1px solid rgba(95,184,122,0.3); }
+  .badge-next { background: rgba(212,102,58,0.12); color: var(--accent); border: 1px solid rgba(212,102,58,0.3); }
+  .badge-todo { background: rgba(107,116,128,0.1); color: var(--muted); border: 1px solid var(--line); }
+
+  /* disabled (not yet made) */
+  .sec-card.todo {
+    opacity: 0.45; pointer-events: none; cursor: default;
+  }
+
+  /* tip */
+  .tip {
+    margin-top: 36px; padding: 16px 20px;
+    background: rgba(201,162,39,0.05); border: 1px dashed rgba(201,162,39,0.25);
+    border-radius: 10px; font-size: 0.88rem; color: var(--ink-soft); line-height: 1.65;
+  }
+  .tip b { color: var(--gold); }
+
+  footer {
+    text-align: center; padding: 40px 0 0;
+    border-top: 1px solid var(--line); margin-top: 40px;
+    color: var(--ink-faint); font-size: 0.82rem;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="site-header">
+    <div class="eyebrow">互動式自學</div>
+    <h1>Introduction to Probability</h1>
+    <p class="sub">Blitzstein &amp; Hwang · 每節一個 HTML · 讀完 HTML = 讀完原書那節<br>
+    進度:<em>§2.1 完成</em></p>
+  </div>
+
+  <!-- Chapter 2 -->
+  <div class="chapter">
+    <div class="chapter-label">Chapter 2</div>
+    <div class="chapter-title">Conditional Probability</div>
+    <div class="sections">
+
+      <a href="ch02/2-1.html" class="sec-card">
+        <div class="sec-num">2.1</div>
+        <div class="sec-body">
+          <div class="sec-en">The importance of thinking conditionally</div>
+          <div class="sec-zh">為什麼「有條件地」思考如此重要</div>
+        </div>
+        <span class="sec-badge badge-done">完成</span>
+      </a>
+
+      <div class="sec-card todo">
+        <div class="sec-num">2.2</div>
+        <div class="sec-body">
+          <div class="sec-en">Definition and intuition</div>
+          <div class="sec-zh">條件機率的正式定義</div>
+        </div>
+        <span class="sec-badge badge-next">下一節</span>
+      </div>
+
+      <div class="sec-card todo">
+        <div class="sec-num">2.3</div>
+        <div class="sec-body">
+          <div class="sec-en">Bayes' rule and the law of total probability</div>
+          <div class="sec-zh">貝氏定理與全機率公式</div>
+        </div>
+        <span class="sec-badge badge-todo">待產</span>
+      </div>
+
+      <div class="sec-card todo">
+        <div class="sec-num">2.4</div>
+        <div class="sec-body">
+          <div class="sec-en">Conditional probabilities are probabilities</div>
+          <div class="sec-zh">條件機率也是合法的機率測度</div>
+        </div>
+        <span class="sec-badge badge-todo">待產</span>
+      </div>
+
+      <div class="sec-card todo">
+        <div class="sec-num">2.5</div>
+        <div class="sec-body">
+          <div class="sec-en">Independence of events</div>
+          <div class="sec-zh">獨立性</div>
+        </div>
+        <span class="sec-badge badge-todo">待產</span>
+      </div>
+
+      <div class="sec-card todo">
+        <div class="sec-num">2.6</div>
+        <div class="sec-body">
+          <div class="sec-en">Coherency of Bayes' rule</div>
+          <div class="sec-zh">貝氏更新的一致性</div>
+        </div>
+        <span class="sec-badge badge-todo">待產</span>
+      </div>
+
+      <div class="sec-card todo">
+        <div class="sec-num">2.7</div>
+        <div class="sec-body">
+          <div class="sec-en">Conditioning as a problem-solving tool</div>
+          <div class="sec-zh">條件機率作為解題工具</div>
+        </div>
+        <span class="sec-badge badge-todo">待產</span>
+      </div>
+
+      <div class="sec-card todo">
+        <div class="sec-num">2.8</div>
+        <div class="sec-body">
+          <div class="sec-en">Pitfalls and paradoxes</div>
+          <div class="sec-zh">陷阱與悖論</div>
+        </div>
+        <span class="sec-badge badge-todo">待產</span>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="tip">
+    <b>📱 手機使用提示</b><br>
+    在 Safari / Chrome 點右上角「分享」→「加入主畫面」,就能把這個頁面釘在手機桌面,像 App 一樣一鍵開啟。
+  </div>
+
+  <footer>
+    Blitzstein &amp; Hwang, <em>Introduction to Probability</em> · 互動式自學版 · jimmylion
+  </footer>
+
+</div>
+</body>
+</html>

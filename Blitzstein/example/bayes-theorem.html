@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>貝氏定理 · 漸進式引導</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Spline+Sans+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+
+  :root {
+    --bg: #0e1116;
+    --bg-soft: #161b22;
+    --panel: #1c232e;
+    --ink: #e8e2d4;
+    --ink-soft: #a9b1bd;
+    --ink-faint: #6b7480;
+    --line: #2a323d;
+    --hyp: #c9a227;       /* 假設 / 圖書館員 = 金 */
+    --hyp-soft: #6e5a18;
+    --alt: #4a6fa5;       /* 反例 / 農夫 = 藍 */
+    --alt-soft: #2a3f5c;
+    --evi: #d4663a;       /* 證據 = 橘 */
+    --good: #5fb87a;
+    --bad: #d65f6e;
+    --accent: #d4663a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(212,102,58,0.08), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 90% 10%, rgba(201,162,39,0.06), transparent 50%),
+      var(--bg);
+    color: var(--ink);
+    font-family: 'Noto Sans TC', sans-serif;
+    line-height: 1.75;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* grain overlay */
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 9999; mix-blend-mode: overlay;
+  }
+
+  .wrap { max-width: 760px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---------- progress rail ---------- */
+  #rail {
+    position: fixed; top: 0; left: 0; right: 0; height: 3px;
+    background: var(--line); z-index: 100;
+  }
+  #rail-fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--hyp), var(--evi));
+    transition: width 0.4s ease;
+  }
+
+  #dots {
+    position: fixed; right: 22px; top: 50%; transform: translateY(-50%);
+    display: flex; flex-direction: column; gap: 13px; z-index: 100;
+  }
+  #dots button {
+    width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid var(--ink-faint);
+    background: transparent; cursor: pointer; padding: 0; transition: all 0.25s;
+  }
+  #dots button.active { background: var(--evi); border-color: var(--evi); transform: scale(1.35); }
+  #dots button.done { background: var(--hyp); border-color: var(--hyp); }
+  @media (max-width: 720px) { #dots { display: none; } }
+
+  /* ---------- hero ---------- */
+  header {
+    min-height: 92vh; display: flex; flex-direction: column;
+    justify-content: center; padding: 60px 0;
+  }
+  .eyebrow {
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.78rem;
+    letter-spacing: 0.32em; text-transform: uppercase;
+    color: var(--evi); margin-bottom: 22px;
+  }
+  h1 {
+    font-family: 'Newsreader', serif; font-weight: 500;
+    font-size: clamp(2.8rem, 8vw, 5rem); line-height: 1.04;
+    letter-spacing: -0.01em; margin-bottom: 8px;
+  }
+  h1 .formula {
+    display: block; font-family: 'Spline Sans Mono', monospace;
+    font-size: clamp(1rem, 3.2vw, 1.6rem); color: var(--hyp);
+    margin-top: 26px; font-weight: 400; letter-spacing: 0.02em;
+  }
+  .hero-sub {
+    font-family: 'Newsreader', serif; font-style: italic;
+    font-size: clamp(1.1rem, 2.5vw, 1.45rem); color: var(--ink-soft);
+    max-width: 30ch; margin-top: 28px;
+  }
+  .scroll-hint {
+    margin-top: 64px; font-family: 'Spline Sans Mono', monospace;
+    font-size: 0.8rem; color: var(--ink-faint); letter-spacing: 0.1em;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .scroll-hint .arrow { animation: bob 1.8s ease-in-out infinite; }
+  @keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(6px)} }
+
+  /* ---------- stage ---------- */
+  .stage {
+    padding: 70px 0 90px; border-top: 1px solid var(--line);
+    opacity: 0; transform: translateY(28px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+  .stage.visible { opacity: 1; transform: none; }
+
+  .stage-tag {
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.74rem;
+    letter-spacing: 0.28em; text-transform: uppercase;
+    color: var(--evi); margin-bottom: 16px; display: flex; align-items: center; gap: 12px;
+  }
+  .stage-tag::before {
+    content: ""; width: 30px; height: 1px; background: var(--evi);
+  }
+  h2 {
+    font-family: 'Newsreader', serif; font-weight: 500;
+    font-size: clamp(1.7rem, 4.5vw, 2.5rem); line-height: 1.15;
+    margin-bottom: 22px; letter-spacing: -0.01em;
+  }
+  p { margin-bottom: 18px; color: var(--ink-soft); font-size: 1.04rem; }
+  p strong { color: var(--ink); font-weight: 500; }
+  .lead { color: var(--ink); font-size: 1.12rem; }
+
+  /* quote */
+  blockquote {
+    border-left: 2px solid var(--hyp); padding: 6px 0 6px 24px;
+    margin: 26px 0; font-family: 'Newsreader', serif; font-style: italic;
+    font-size: 1.18rem; color: var(--ink); line-height: 1.6;
+  }
+  blockquote b { font-style: normal; color: var(--hyp); font-weight: 600; }
+
+  /* ---------- question card ---------- */
+  .q {
+    background: linear-gradient(160deg, var(--panel), var(--bg-soft));
+    border: 1px solid var(--line); border-radius: 14px;
+    padding: 28px 26px; margin: 30px 0;
+    box-shadow: 0 14px 40px rgba(0,0,0,0.35);
+    position: relative; overflow: hidden;
+  }
+  .q::before {
+    content: "?"; position: absolute; top: -18px; right: 4px;
+    font-family: 'Newsreader', serif; font-size: 8rem; font-style: italic;
+    color: rgba(212,102,58,0.07); pointer-events: none;
+  }
+  .q-label {
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.72rem;
+    letter-spacing: 0.2em; text-transform: uppercase; color: var(--evi);
+    margin-bottom: 14px;
+  }
+  .q-text { color: var(--ink); font-size: 1.08rem; font-weight: 500; margin-bottom: 22px; line-height: 1.55; }
+  .q-text .small { display:block; font-weight:400; color: var(--ink-soft); font-size: 0.95rem; margin-top: 8px; }
+
+  .opts { display: flex; flex-direction: column; gap: 11px; }
+  .opt {
+    text-align: left; background: var(--bg); border: 1px solid var(--line);
+    color: var(--ink-soft); padding: 14px 18px; border-radius: 9px;
+    cursor: pointer; font-family: inherit; font-size: 0.98rem;
+    transition: all 0.2s; position: relative; line-height: 1.45;
+  }
+  .opt:hover:not(.locked) { border-color: var(--evi); color: var(--ink); transform: translateX(3px); }
+  .opt.chosen { border-color: var(--evi); }
+  .opt.correct { border-color: var(--good); background: rgba(95,184,122,0.1); color: var(--ink); }
+  .opt.wrong { border-color: var(--bad); background: rgba(214,95,110,0.08); }
+  .opt .mark { float: right; font-weight: 700; }
+
+  .feedback {
+    margin-top: 18px; padding: 16px 18px; border-radius: 9px;
+    background: var(--bg); border-left: 3px solid var(--evi);
+    font-size: 0.97rem; color: var(--ink-soft); display: none;
+  }
+  .feedback.show { display: block; animation: fadeUp 0.45s ease; }
+  .feedback strong { color: var(--ink); }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+
+  /* reveal-after-answer content */
+  .gated { display: none; }
+  .gated.show { display: block; animation: fadeUp 0.55s ease; }
+
+  /* ---------- interactive: sample grid ---------- */
+  .panel {
+    background: var(--bg-soft); border: 1px solid var(--line);
+    border-radius: 12px; padding: 22px; margin: 26px 0;
+  }
+  .panel-title {
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.76rem;
+    letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-faint);
+    margin-bottom: 16px;
+  }
+  .grid-people {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(13px, 1fr));
+    gap: 3px; margin-bottom: 8px;
+  }
+  .dot-p {
+    aspect-ratio: 1; border-radius: 2px; background: var(--alt-soft);
+    transition: all 0.35s; transition-delay: calc(var(--i) * 4ms);
+  }
+  .dot-p.lib { background: var(--hyp-soft); }
+  .dot-p.fit-farm { background: var(--alt); box-shadow: 0 0 6px rgba(74,111,165,0.7); }
+  .dot-p.fit-lib { background: var(--hyp); box-shadow: 0 0 7px rgba(201,162,39,0.8); }
+  .dot-p.dim { opacity: 0.18; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 14px; font-size: 0.82rem; color: var(--ink-soft); }
+  .legend span { display: flex; align-items: center; gap: 7px; }
+  .legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+
+  /* slider */
+  .slider-row { margin: 18px 0; }
+  .slider-row label {
+    display: flex; justify-content: space-between; font-size: 0.9rem;
+    color: var(--ink-soft); margin-bottom: 8px;
+  }
+  .slider-row label b { font-family: 'Spline Sans Mono', monospace; color: var(--evi); }
+  input[type=range] {
+    -webkit-appearance: none; appearance: none; width: 100%; height: 4px;
+    background: var(--line); border-radius: 4px; outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%;
+    background: var(--evi); cursor: pointer; box-shadow: 0 0 0 4px rgba(212,102,58,0.2);
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 18px; height: 18px; border-radius: 50%; background: var(--evi);
+    cursor: pointer; border: none; box-shadow: 0 0 0 4px rgba(212,102,58,0.2);
+  }
+
+  .readout {
+    display: flex; align-items: baseline; gap: 10px; margin-top: 18px;
+    font-family: 'Spline Sans Mono', monospace;
+  }
+  .readout .big {
+    font-size: 2.4rem; color: var(--hyp); font-weight: 600;
+  }
+  .readout .lbl { font-size: 0.85rem; color: var(--ink-faint); font-family: 'Noto Sans TC'; }
+
+  /* ---------- area diagram ---------- */
+  .area-wrap { display: flex; flex-direction: column; align-items: center; }
+  .area-box {
+    position: relative; width: 100%; max-width: 420px; aspect-ratio: 1;
+    border: 1px solid var(--line); border-radius: 6px; overflow: hidden;
+    background: var(--bg);
+  }
+  .area-hyp { position: absolute; top:0; left:0; height:100%; background: rgba(201,162,39,0.16); transition: width 0.3s; }
+  .area-alt { position: absolute; top:0; right:0; height:100%; background: rgba(74,111,165,0.14); transition: width 0.3s; }
+  .area-fit-lib { position: absolute; left:0; bottom:0; background: var(--hyp); transition: all 0.3s; }
+  .area-fit-farm { position: absolute; right:0; bottom:0; background: var(--alt); transition: all 0.3s; }
+  .area-label { position:absolute; font-family:'Spline Sans Mono',monospace; font-size:0.7rem; color: var(--ink); pointer-events:none; }
+
+  /* ---------- formula builder ---------- */
+  .formula-card {
+    background: var(--bg); border: 1px solid var(--line); border-radius: 12px;
+    padding: 30px 24px; margin: 26px 0; text-align: center;
+  }
+  .frac {
+    display: inline-flex; flex-direction: column; align-items: center;
+    font-family: 'Spline Sans Mono', monospace; vertical-align: middle; margin: 0 4px;
+  }
+  .frac .num { padding: 0 12px 6px; border-bottom: 1.5px solid var(--ink-soft); }
+  .frac .den { padding: 6px 12px 0; }
+  .bayes-eq {
+    font-family: 'Spline Sans Mono', monospace; font-size: clamp(0.85rem, 2.6vw, 1.15rem);
+    line-height: 1.4; color: var(--ink); display: flex; align-items: center;
+    justify-content: center; flex-wrap: wrap; gap: 4px;
+  }
+  .tok { padding: 2px 5px; border-radius: 4px; cursor: help; transition: all 0.2s; position: relative; }
+  .tok.h { color: var(--hyp); background: rgba(201,162,39,0.1); }
+  .tok.e { color: var(--evi); background: rgba(212,102,58,0.12); }
+  .tok:hover { background: rgba(255,255,255,0.12); }
+  .tok-note {
+    display: none; margin-top: 16px; padding: 14px 16px; background: var(--bg-soft);
+    border: 1px solid var(--line); border-radius: 8px; font-family: 'Noto Sans TC';
+    font-size: 0.92rem; color: var(--ink-soft); text-align: left;
+  }
+  .tok-note.show { display: block; animation: fadeUp 0.4s; }
+  .tok-note b { color: var(--evi); }
+
+  .jargon { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; justify-content: center; }
+  .jargon button {
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.8rem;
+    background: var(--bg-soft); border: 1px solid var(--line); color: var(--ink-soft);
+    padding: 8px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s;
+  }
+  .jargon button:hover, .jargon button.on { border-color: var(--evi); color: var(--ink); }
+
+  /* note box */
+  .note {
+    background: rgba(201,162,39,0.06); border: 1px solid var(--hyp-soft);
+    border-radius: 10px; padding: 18px 20px; margin: 24px 0;
+    font-size: 0.97rem; color: var(--ink-soft);
+  }
+  .note .n-title { color: var(--hyp); font-weight: 600; font-size: 0.85rem;
+    letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px;
+    font-family: 'Spline Sans Mono', monospace; }
+
+  .mantra {
+    font-family: 'Newsreader', serif; font-style: italic;
+    font-size: clamp(1.3rem, 3.5vw, 1.9rem); line-height: 1.4;
+    color: var(--ink); text-align: center; margin: 40px 0;
+    padding: 0 10px;
+  }
+  .mantra b { font-style: normal; color: var(--evi); font-weight: 600; }
+
+  /* ---------- fill-in estimate ---------- */
+  .estimate { display: flex; flex-direction: column; gap: 16px; margin-bottom: 6px; }
+  .est-row {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    background: var(--bg); border: 1px solid var(--line); border-radius: 9px;
+    padding: 14px 16px;
+  }
+  .est-row .calc {
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.9rem;
+    color: var(--ink-soft); flex: 1; min-width: 160px;
+  }
+  .est-row .calc b { color: var(--ink); }
+  .est-input {
+    width: 74px; background: var(--bg-soft); border: 1.5px solid var(--line);
+    color: var(--ink); font-family: 'Spline Sans Mono', monospace; font-size: 1.05rem;
+    text-align: center; padding: 9px 6px; border-radius: 7px; transition: all 0.2s;
+  }
+  .est-input:focus { outline: none; border-color: var(--evi); }
+  .est-input.ok { border-color: var(--good); background: rgba(95,184,122,0.12); }
+  .est-input.no { border-color: var(--bad); background: rgba(214,95,110,0.1); }
+  .est-row .unit { font-size: 0.88rem; color: var(--ink-faint); }
+  .est-tick { font-size: 1.1rem; width: 18px; display: inline-block; }
+
+  /* predict-then-verify */
+  .predict {
+    background: var(--bg); border: 1px dashed var(--alt); border-radius: 10px;
+    padding: 18px 20px; margin: 22px 0;
+  }
+  .predict .p-q { color: var(--ink); font-size: 1rem; margin-bottom: 14px; }
+  .predict .p-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .predict .pct-suffix { font-family:'Spline Sans Mono',monospace; color: var(--ink-soft); }
+  .predict .p-result { margin-top: 14px; font-size: 0.95rem; color: var(--ink-soft); display: none; }
+  .predict .p-result.show { display: block; animation: fadeUp 0.4s; }
+  .predict .p-result b { color: var(--evi); }
+
+  /* reflection textarea */
+  .reflect textarea {
+    width: 100%; background: var(--bg); border: 1px solid var(--line);
+    color: var(--ink); border-radius: 9px; padding: 14px; font-family: inherit;
+    font-size: 0.98rem; resize: vertical; min-height: 90px; line-height: 1.6;
+  }
+  .reflect textarea:focus { outline: none; border-color: var(--evi); }
+
+  .btn {
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.85rem;
+    letter-spacing: 0.05em; background: var(--evi); color: #fff; border: none;
+    padding: 11px 22px; border-radius: 8px; cursor: pointer; margin-top: 14px;
+    transition: all 0.2s;
+  }
+  .btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+  .btn.ghost { background: transparent; border: 1px solid var(--line); color: var(--ink-soft); }
+
+  /* finale */
+  .finale { text-align: center; padding: 80px 0 60px; }
+  .finale h2 { margin-bottom: 30px; }
+  .recap { display: grid; gap: 14px; text-align: left; margin: 30px 0; }
+  .recap-item {
+    background: var(--bg-soft); border: 1px solid var(--line); border-radius: 10px;
+    padding: 16px 20px; display: flex; gap: 14px; align-items: flex-start;
+  }
+  .recap-item .num {
+    font-family: 'Spline Sans Mono', monospace; color: var(--evi);
+    font-size: 0.85rem; font-weight: 600; flex-shrink: 0; padding-top: 2px;
+  }
+  .recap-item p { margin: 0; font-size: 0.96rem; }
+  .recap-item b { color: var(--ink); }
+
+  footer {
+    text-align: center; padding: 50px 0; border-top: 1px solid var(--line);
+    color: var(--ink-faint); font-size: 0.85rem;
+  }
+  footer a { color: var(--evi); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+
+  .inline-h { color: var(--hyp); font-weight: 500; }
+  .inline-e { color: var(--evi); font-weight: 500; }
+  .inline-a { color: var(--alt); font-weight: 500; }
+</style>
+</head>
+<body>
+
+<div id="rail"><div id="rail-fill"></div></div>
+<nav id="dots"></nav>
+
+<div class="wrap">
+
+  <!-- ============ HERO ============ -->
+  <header>
+    <div class="eyebrow">3Blue1Brown · 漸進式引導</div>
+    <h1>貝氏定理
+      <span class="formula">P(H|E) = P(H)·P(E|H) / P(E)</span>
+    </h1>
+    <p class="hero-sub">先別急著背公式。我們會用「思考一個叫 Steve 的人」當作起點，一步步把這個式子長出來。</p>
+    <div class="scroll-hint"><span class="arrow">↓</span> 往下捲動，跟著問題一起想</div>
+  </header>
+
+  <!-- ============ STAGE 1: STEVE ============ -->
+  <section class="stage" id="s1">
+    <div class="stage-tag">第一站 · 直覺陷阱</div>
+    <h2>認識一下 Steve</h2>
+    <blockquote>
+      Steve 非常<b>害羞、內向</b>，總是樂於助人，但對人群或現實世界興趣缺缺。他是個<b>溫順又愛整潔</b>的靈魂，需要秩序與結構，並且對細節充滿熱情。
+    </blockquote>
+
+    <div class="q" data-q="steve">
+      <div class="q-label">先憑直覺猜</div>
+      <div class="q-text">你覺得哪個比較可能？</div>
+      <div class="opts">
+        <button class="opt" data-correct="false">Steve 是圖書館員</button>
+        <button class="opt" data-correct="true">Steve 是農夫</button>
+      </div>
+      <div class="feedback" data-fb>
+        <strong>大多數人會選「圖書館員」</strong>——因為描述聽起來很「圖書館員」。但這正是 Kahneman 與 Tversky 研究的認知偏誤：幾乎沒有人想到一個關鍵事實 ⟶ <span class="inline-a">農夫的人數遠多於圖書館員</span>。在美國，這個比例大約是 <b>20 個農夫</b> 比 <b>1 個圖書館員</b>。
+      </div>
+    </div>
+
+    <div class="gated" data-gate="steve">
+      <p>這裡的重點不是「你對圖書館員的刻板印象對不對」，而是：<strong>你有沒有想到要把「兩種職業人數的比例」納入判斷？</strong></p>
+      <p class="lead">理性，不是知道多少事實，而是<strong>認出哪些事實是相關的</strong>。</p>
+    </div>
+  </section>
+
+  <!-- ============ STAGE 2: SAMPLE ============ -->
+  <section class="stage" id="s2">
+    <div class="stage-tag">第二站 · 用「一群人」來想</div>
+    <h2>想像一個具代表性的樣本</h2>
+    <p>把抽象的機率丟掉，先想一群實際的人。假設我們抓了一個有代表性的樣本：<span class="inline-a">200 個農夫</span> 和 <span class="inline-h">10 個圖書館員</span>，共 210 人。</p>
+    <p>接著靠你的直覺估計：聽到「溫順愛整潔」這段描述，你覺得 <strong>40% 的圖書館員</strong> 符合、而 <strong>10% 的農夫</strong> 符合。</p>
+
+    <div class="q" data-q="count">
+      <div class="q-label">自己算 · 填進去</div>
+      <div class="q-text">在這 210 人裡，會有多少「符合描述」的圖書館員、多少「符合描述」的農夫？
+        <span class="small">自己動手算，填進框裡。算完按「核對」。</span>
+      </div>
+      <div class="estimate">
+        <div class="est-row">
+          <span class="calc"><b>圖書館員</b>　10 人 × 40% =</span>
+          <input type="text" class="est-input" id="estLib" inputmode="numeric" placeholder="?">
+          <span class="unit">人</span>
+          <span class="est-tick" id="tickLib"></span>
+        </div>
+        <div class="est-row">
+          <span class="calc"><b>農夫</b>　200 人 × 10% =</span>
+          <input type="text" class="est-input" id="estFarm" inputmode="numeric" placeholder="?">
+          <span class="unit">人</span>
+          <span class="est-tick" id="tickFarm"></span>
+        </div>
+      </div>
+      <button class="btn" id="checkEst">核對答案</button>
+      <div class="feedback" data-fb>
+        <strong>4 個圖書館員、20 個農夫。</strong> 即使圖書館員「符合描述」的比例（40%）是農夫（10%）的 4 倍，農夫的<span class="inline-a">基數實在太大</span>，符合描述的農夫反而更多。
+      </div>
+    </div>
+
+    <div class="gated" data-gate="count">
+      <div class="panel">
+        <div class="panel-title">210 人的樣本 · 點亮符合描述的人</div>
+        <div class="grid-people" id="grid"></div>
+        <div class="legend">
+          <span><i style="background:var(--hyp-soft)"></i>圖書館員（不符合）</span>
+          <span><i style="background:var(--hyp)"></i>圖書館員（符合）</span>
+          <span><i style="background:var(--alt-soft)"></i>農夫（不符合）</span>
+          <span><i style="background:var(--alt)"></i>農夫（符合）</span>
+        </div>
+        <button class="btn ghost" id="highlightFit" style="margin-top:16px">只看「符合描述」的人 →</button>
+      </div>
+
+      <p>所以，一個「符合描述」的人是圖書館員的機率是：</p>
+      <div class="formula-card">
+        <span class="bayes-eq">
+          <span class="frac"><span class="num">4 位圖書館員</span><span class="den">4 + 20 = 24 人符合</span></span>
+          <span>=</span>
+          <span class="tok h">16.7%</span>
+        </span>
+      </div>
+      <p class="lead">看到沒？你原本覺得「一定是圖書館員」的直覺，被「人數比例」修正成了只有六分之一左右。</p>
+    </div>
+  </section>
+
+  <!-- ============ STAGE 3: THE MANTRA ============ -->
+  <section class="stage" id="s3">
+    <div class="stage-tag">第三站 · 核心心法</div>
+    <h2>新證據不會「決定」信念，只會「更新」它</h2>
+    <p>這就是貝氏定理的靈魂。讀 Steve 的描述<strong>之前</strong>，他是農夫的機率本來是 20 比 1。讀完描述<strong>之後</strong>，這個信念應該被<strong>修正</strong>，但不該被<strong>整個推翻</strong>。</p>
+
+    <div class="mantra">
+      證據應該 <b>更新</b> 你原本的信念，<br>而不是憑空 <b>取代</b> 它。
+    </div>
+
+    <div class="q reflect" data-q="reflect1">
+      <div class="q-label">用自己的話說一次</div>
+      <div class="q-text">先別往下看。試著用一句話寫下：為什麼「描述很像圖書館員」還是推不出「他很可能是圖書館員」？</div>
+      <textarea placeholder="在這裡寫下你的想法⋯⋯（這只是幫你整理思緒，不會被儲存）"></textarea>
+      <button class="btn" data-reveal>我想好了，看看怎麼整理</button>
+      <div class="feedback" data-fb>
+        一個好的講法是：<strong>「符合描述」這件事，在農夫和圖書館員兩邊都會發生。</strong>雖然圖書館員符合的「比例」高，但農夫的「總人數」大太多，所以實際符合描述的農夫人數仍然輾壓圖書館員。判斷誰比較可能，要看的是<span class="inline-e">符合證據的人之中</span>，各佔多少。
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STAGE 4: BUILD FORMULA ============ -->
+  <section class="stage" id="s4">
+    <div class="stage-tag">第四站 · 把式子長出來</div>
+    <h2>從剛剛的算法，變成公式</h2>
+    <p>剛剛我們算的是：<span class="inline-h">符合描述的圖書館員(4)</span> ÷ <span class="inline-e">所有符合描述的人(24)</span>。現在把每個數字「換成它的來源」。</p>
+
+    <p>那個 <span class="inline-h">4</span> 從哪來？= 總人數 210 × <strong>圖書館員的先驗比例</strong>(1/21) × <strong>圖書館員符合描述的比例</strong>(40%)。</p>
+    <p>分母那個 <span class="inline-a">20</span> 從哪來？= 總人數 210 × <strong>不是圖書館員的比例</strong>(20/21) × <strong>農夫符合描述的比例</strong>(10%)。</p>
+
+    <div class="q" data-q="cancel">
+      <div class="q-label">關鍵的一步</div>
+      <div class="q-text">分子和分母都各自乘上了「總人數 210」。當我們把式子整理成純機率時，這個 210 會發生什麼事？</div>
+      <div class="opts">
+        <button class="opt" data-correct="false">留在分母，讓答案變小</button>
+        <button class="opt" data-correct="true">上下相消，完全消失</button>
+        <button class="opt" data-correct="false">要改成乘以 100</button>
+      </div>
+      <div class="feedback" data-fb>
+        <strong>對，上下相消！</strong> 210 本來就是我們隨便挑的數字，它必須消失才合理。消掉之後，剩下的就是純粹用機率寫成的——這就是貝氏定理。
+      </div>
+    </div>
+
+    <div class="gated" data-gate="cancel">
+      <div class="formula-card">
+        <div class="bayes-eq">
+          <span class="tok h" data-tok="post">P(H|E)</span>
+          <span>=</span>
+          <span class="frac">
+            <span class="num"><span class="tok h" data-tok="prior">P(H)</span> · <span class="tok e" data-tok="like">P(E|H)</span></span>
+            <span class="den"><span class="tok h">P(H)</span>·<span class="tok e">P(E|H)</span> + <span class="tok h" data-tok="notprior">P(¬H)</span>·<span class="tok e" data-tok="notlike">P(E|¬H)</span></span>
+          </span>
+        </div>
+        <div class="tok-note" data-note="post"><b>後驗 Posterior：</b>看到證據之後，你對假設的新信念。這正是我們想求的東西。</div>
+        <div class="tok-note" data-note="prior"><b>先驗 Prior — P(H)：</b>還沒看到證據前，假設成立的機率。例子裡是 1/21（圖書館員佔全部人的比例）。</div>
+        <div class="tok-note" data-note="like"><b>似然 Likelihood — P(E|H)：</b>假設成立時，看到這個證據的機率。例子裡是 40%（圖書館員符合描述的比例）。直線「|」讀作「在⋯⋯的條件下」。</div>
+        <div class="tok-note" data-note="notprior"><b>P(¬H)：</b>假設「不成立」的機率。例子裡是 20/21（不是圖書館員的比例）。</div>
+        <div class="tok-note" data-note="notlike"><b>P(E|¬H)：</b>假設不成立時還是看到證據的機率。例子裡是 10%（農夫也符合描述的比例）。這項常被忽略，卻是關鍵！</div>
+        <p style="font-size:0.85rem;color:var(--ink-faint);margin:18px 0 0;font-family:'Spline Sans Mono'">↑ 點任何一個彩色項目，看它代表什麼</p>
+      </div>
+
+      <div class="note">
+        <div class="n-title">術語小抄</div>
+        分母那一長串，常常簡寫成 <span class="inline-e">P(E)</span>，意思是「看到證據的總機率」。但實務上要算它，幾乎都得拆成「假設成立」和「假設不成立」兩種情況加起來——也就是上面那個完整的分母。
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STAGE 5: AREA ============ -->
+  <section class="stage" id="s5">
+    <div class="stage-tag">第五站 · 用面積思考</div>
+    <h2>別背公式，畫一個 1×1 的方塊</h2>
+    <p>Grant 的建議是：<strong>不要背公式，需要時把這張圖畫出來。</strong> 把「所有可能性」想成一個邊長為 1 的正方形。假設 <span class="inline-h">H</span> 佔左邊一塊，寬度就是 <span class="inline-h">P(H)</span>；證據則在上下方向把空間「切掉一部分」。</p>
+    <p>關鍵：證據在左右兩邊「砍掉」的比例<strong>通常不一樣</strong>。新的機率，就是 H 在<span class="inline-e">剩下這塊受限空間</span>裡所佔的比例。</p>
+
+    <div class="predict" id="predictBlock">
+      <div class="p-q">先別碰滑桿。用我們的例子（先驗 10%、H 似然 40%、¬H 似然 10%），<strong>憑直覺猜一下</strong>：看到證據後，後驗 P(H|E) 大約是多少？</div>
+      <div class="p-row">
+        <input type="text" class="est-input" id="guessPost" inputmode="numeric" placeholder="?" style="width:90px">
+        <span class="pct-suffix">%</span>
+        <button class="btn ghost" id="lockGuess" style="margin-top:0">鎖定我的猜測</button>
+      </div>
+      <div class="p-result" id="guessResult"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">拖動滑桿，看面積怎麼變</div>
+      <div class="area-wrap">
+        <div class="area-box" id="areaBox">
+          <div class="area-hyp" id="aHyp"></div>
+          <div class="area-alt" id="aAlt"></div>
+          <div class="area-fit-lib" id="aFitLib"></div>
+          <div class="area-fit-farm" id="aFitFarm"></div>
+        </div>
+      </div>
+
+      <div class="slider-row">
+        <label>先驗 P(H) — 假設本來的可能性 <b id="vPrior">10%</b></label>
+        <input type="range" id="sPrior" min="2" max="90" value="10">
+      </div>
+      <div class="slider-row">
+        <label>似然 P(E|H) — H 成立時符合證據的比例 <b id="vLike">40%</b></label>
+        <input type="range" id="sLike" min="0" max="100" value="40">
+      </div>
+      <div class="slider-row">
+        <label>P(E|¬H) — H 不成立時也符合證據的比例 <b id="vNot">10%</b></label>
+        <input type="range" id="sNot" min="0" max="100" value="10">
+      </div>
+
+      <div class="readout">
+        <span class="big" id="postOut">16.7%</span>
+        <span class="lbl">← 後驗 P(H|E)：看到證據後，假設成立的機率</span>
+      </div>
+    </div>
+
+    <div class="q" data-q="irrelevant">
+      <div class="q-label">玩玩看，再回答</div>
+      <div class="q-text">把上面兩個似然滑到<strong>一樣</strong>（例如都是 40%），後驗會怎樣？試試看再選。</div>
+      <div class="opts">
+        <button class="opt" data-correct="true">後驗 = 先驗，信念完全不變</button>
+        <button class="opt" data-correct="false">後驗一定會變成 50%</button>
+        <button class="opt" data-correct="false">後驗會歸零</button>
+      </div>
+      <div class="feedback" data-fb>
+        <strong>正解。</strong> 當證據在「H 成立」與「H 不成立」兩邊發生的機率一樣，它就<strong>沒有區分力</strong>——後驗會等於先驗。<span class="inline-e">不相關的證據，不會改變你的信念。</span>反過來，兩個似然差越多，信念就被推動得越劇烈。</div>
+    </div>
+  </section>
+
+  <!-- ============ STAGE 6: LINDA / FRAMING ============ -->
+  <section class="stage" id="s6">
+    <div class="stage-tag">第六站 · 換個說法，腦袋就通了</div>
+    <h2>「40 out of 100」的魔力</h2>
+    <p>再看一個 Kahneman & Tversky 的經典。有位虛構女性 Linda：31 歲、單身、直率、聰明，主修哲學，學生時代關心歧視與社會正義、參加反核遊行。</p>
+
+    <div class="q" data-q="linda">
+      <div class="q-label">哪個比較可能？</div>
+      <div class="q-text">關於 Linda：</div>
+      <div class="opts">
+        <button class="opt" data-correct="true">她是銀行行員</button>
+        <button class="opt" data-correct="false">她是銀行行員，而且積極參與女權運動</button>
+      </div>
+      <div class="feedback" data-fb>
+        <strong>「她是銀行行員」永遠比較可能。</strong> 因為「銀行行員 + 女權運動者」是「所有銀行行員」的<strong>子集合</strong>——子集合不可能比母集合更大。當年約 <b>85%</b> 的人選錯。但只要把問法改成「100 個符合描述的人裡，幾個是行員、幾個是行員兼女權運動者？」，犯錯率就<strong>掉到 0%</strong>。</div>
+    </div>
+
+    <div class="gated" data-gate="linda">
+      <p>同樣的事實，「<strong>40 out of 100</strong>」比「40%」、比「0.4」、比抽象地說「比較可能」，更能啟動我們的直覺。這呼應了第二站：<strong>用一群具體的人來想，常常勝過抽象機率。</strong></p>
+      <div class="note">
+        <div class="n-title">兩種好用的圖像</div>
+        <strong>具代表性的樣本</strong>（210 個人）直覺、好懂；<strong>面積圖</strong>（1×1 方塊）則更能表現機率的連續性，而且隨手就能畫。兩個都是把「機率」變成「比例」的工具。
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STAGE 7: PROPORTIONS ============ -->
+  <section class="stage" id="s7">
+    <div class="stage-tag">第七站 · 重新理解機率</div>
+    <h2>機率，其實是「比例」的數學</h2>
+    <p>大家常以為機率是「研究不確定性」的學問。但它真正的核心，其實是<strong>比例的數學</strong>——這時候，幾何（面積）就變得超級好用。</p>
+    <p>如果你把貝氏定理當成一句關於「比例」的話，它其實<strong>近乎顯而易見</strong>：</p>
+
+    <div class="mantra">
+      看遍所有 <b>證據為真</b> 的情況，<br>數數其中 <b>假設也為真</b> 的比例。<br>就這樣。
+    </div>
+
+    <div class="q" data-q="essence">
+      <div class="q-label">檢查理解</div>
+      <div class="q-text">用「比例」的角度看，P(H|E) 到底在問什麼？</div>
+      <div class="opts">
+        <button class="opt" data-correct="false">在所有人之中，H 為真的比例</button>
+        <button class="opt" data-correct="true">在「E 為真」的那群人之中，H 也為真的比例</button>
+        <button class="opt" data-correct="false">H 和 E 同時為真的人數</button>
+      </div>
+      <div class="feedback" data-fb>
+        <strong>正是如此。</strong> 直線「|」就是「先把視野限制在 E 為真的範圍」，然後在那個受限的範圍裡，看 H 佔多少。這個「先限制、再看比例」的動作，就是整個定理在做的事。
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STAGE 8: CONTROVERSY ============ -->
+  <section class="stage" id="s8">
+    <div class="stage-tag">第八站 · Steve 的爭議</div>
+    <h2>就算你不買單，這張圖還是有用</h2>
+    <p>有些心理學家質疑 Kahneman & Tversky 的結論。Steve 到底是誰？是隨機抽樣的美國人？還是這兩位心理學家的朋友？還是你身邊可能認識的人？這個假設，決定了你該用的<strong>先驗</strong>。</p>
+    <p>而「圖書館員或農夫符合這種描述的機率有多高」，也高度見仁見智——這影響的是<strong>似然</strong>。</p>
+
+    <div class="note">
+      <div class="n-title">重點</div>
+      任何值得爭論的問題，都能放進這張圖裡：<strong>關於情境的爭論 → 移動先驗；關於性格與刻板印象的爭論 → 移動似然。</strong> 數值會變，但這個用來算機率的架構始終好用。
+    </div>
+
+    <div class="mantra" style="margin-bottom:20px">
+      「證據不該決定信念，而該更新信念」——<br>這句話，值得刺在腦海裡。
+    </div>
+  </section>
+
+  <!-- ============ FINALE ============ -->
+  <section class="stage finale" id="s9">
+    <div class="stage-tag" style="justify-content:center">完成 · 回顧</div>
+    <h2>你走完了一遍</h2>
+    <p>從一個叫 Steve 的人，到一條改變科學、AI、與我們如何看待「改變想法」這件事的公式。</p>
+
+    <div class="recap">
+      <div class="recap-item"><span class="num">01</span><p><b>直覺陷阱：</b>「像圖書館員」不等於「是圖書館員」，因為大多數人忘了考慮人數比例。</p></div>
+      <div class="recap-item"><span class="num">02</span><p><b>具體的人：</b>想像 210 個人，符合描述的是 4 個圖書館員 vs 20 個農夫 → 機率只有 16.7%。</p></div>
+      <div class="recap-item"><span class="num">03</span><p><b>心法：</b>證據只是<em>更新</em>先驗信念，不是<em>取代</em>它。</p></div>
+      <div class="recap-item"><span class="num">04</span><p><b>公式：</b>把計數換成機率、消去總人數，就得到 P(H|E) = P(H)P(E|H) / P(E)。</p></div>
+      <div class="recap-item"><span class="num">05</span><p><b>面積圖：</b>1×1 方塊；證據限縮空間，後驗 = H 在受限空間中的比例。</p></div>
+      <div class="recap-item"><span class="num">06</span><p><b>本質：</b>機率是比例的數學——在 E 為真的範圍裡，看 H 佔多少。</p></div>
+    </div>
+
+    <div class="q reflect" data-q="final" style="text-align:left">
+      <div class="q-label">最後一題 · 帶走它</div>
+      <div class="q-text">想一個你生活中的例子：什麼樣的「證據」曾經讓你一下子就改變看法，但其實你忽略了「先驗」？寫下來，這會讓這個概念真正變成你的。</div>
+      <textarea placeholder="例如：看到一則很聳動的新聞就相信了，卻沒想過這類事件本來有多罕見⋯⋯"></textarea>
+    </div>
+
+    <p style="margin-top:30px">想更進一步，可以回到 <a href="https://www.3blue1brown.com/lessons/bayes-theorem" style="color:var(--evi)" target="_blank">原文</a>，或繼續看下一課的更多例子。</p>
+  </section>
+
+  <footer>
+    內容改編自 <a href="https://www.3blue1brown.com/lessons/bayes-theorem" target="_blank">3Blue1Brown — Bayes' theorem</a>（Grant Sanderson）。<br>
+    本頁為學習用的漸進式引導版本。
+  </footer>
+
+</div>
+
+<script>
+/* ---------- progress + reveal ---------- */
+const stages = [...document.querySelectorAll('.stage')];
+const railFill = document.getElementById('rail-fill');
+const dotsNav = document.getElementById('dots');
+
+stages.forEach((st, i) => {
+  const b = document.createElement('button');
+  b.title = '第 ' + (i+1) + ' 站';
+  b.onclick = () => st.scrollIntoView({behavior:'smooth', block:'start'});
+  dotsNav.appendChild(b);
+});
+const dotBtns = [...dotsNav.children];
+
+const io = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.12 });
+stages.forEach(s => io.observe(s));
+
+function onScroll() {
+  const h = document.documentElement;
+  const pct = h.scrollTop / (h.scrollHeight - h.clientHeight) * 100;
+  railFill.style.width = pct + '%';
+  // active dot
+  let active = 0;
+  stages.forEach((s, i) => {
+    const r = s.getBoundingClientRect();
+    if (r.top < window.innerHeight * 0.5) active = i;
+  });
+  dotBtns.forEach((d, i) => {
+    d.classList.toggle('active', i === active);
+    d.classList.toggle('done', i < active);
+  });
+}
+window.addEventListener('scroll', onScroll); onScroll();
+
+/* ---------- multiple choice questions ---------- */
+document.querySelectorAll('.q[data-q] .opts').forEach(opts => {
+  const card = opts.closest('.q');
+  const fb = card.querySelector('[data-fb]');
+  const gateName = card.getAttribute('data-q');
+  opts.querySelectorAll('.opt').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (opts.dataset.locked) return;
+      opts.dataset.locked = '1';
+      const correct = btn.getAttribute('data-correct') === 'true';
+      opts.querySelectorAll('.opt').forEach(o => {
+        o.classList.add('locked');
+        if (o.getAttribute('data-correct') === 'true') {
+          o.classList.add('correct'); o.querySelector('.mark')?.remove();
+          o.insertAdjacentHTML('beforeend', '<span class="mark" style="color:var(--good)">✓</span>');
+        }
+      });
+      if (!correct) {
+        btn.classList.add('wrong');
+        btn.insertAdjacentHTML('beforeend', '<span class="mark" style="color:var(--bad)">✕</span>');
+      }
+      fb && fb.classList.add('show');
+      // reveal gated content
+      const gated = document.querySelector('.gated[data-gate="'+gateName+'"]');
+      if (gated) setTimeout(() => gated.classList.add('show'), 350);
+    });
+  });
+});
+
+/* ---------- reflection reveal ---------- */
+document.querySelectorAll('[data-reveal]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const fb = btn.closest('.q').querySelector('[data-fb]');
+    fb.classList.add('show'); btn.style.display = 'none';
+  });
+});
+
+/* ---------- stage 2 fill-in estimate ---------- */
+const estLib = document.getElementById('estLib');
+const estFarm = document.getElementById('estFarm');
+const checkEst = document.getElementById('checkEst');
+let estDone = false;
+checkEst?.addEventListener('click', () => {
+  const card = checkEst.closest('.q');
+  const fb = card.querySelector('[data-fb]');
+  const tickLib = document.getElementById('tickLib');
+  const tickFarm = document.getElementById('tickFarm');
+  const vLibOk = parseInt(estLib.value, 10) === 4;
+  const vFarmOk = parseInt(estFarm.value, 10) === 20;
+
+  estLib.classList.toggle('ok', vLibOk); estLib.classList.toggle('no', !vLibOk);
+  estFarm.classList.toggle('ok', vFarmOk); estFarm.classList.toggle('no', !vFarmOk);
+  tickLib.textContent = vLibOk ? '✓' : '✕';
+  tickLib.style.color = vLibOk ? 'var(--good)' : 'var(--bad)';
+  tickFarm.textContent = vFarmOk ? '✓' : '✕';
+  tickFarm.style.color = vFarmOk ? 'var(--good)' : 'var(--bad)';
+
+  if (vLibOk && vFarmOk) {
+    fb.classList.add('show');
+    checkEst.textContent = '答對了 ✓';
+    checkEst.disabled = true; checkEst.style.opacity = '0.6'; checkEst.style.cursor = 'default';
+    if (!estDone) {
+      estDone = true;
+      const gated = document.querySelector('.gated[data-gate="count"]');
+      setTimeout(() => gated && gated.classList.add('show'), 350);
+    }
+  } else {
+    // gentle nudge, let them retry
+    fb.classList.remove('show');
+    checkEst.textContent = '再試一次';
+  }
+});
+[estLib, estFarm].forEach(inp => inp?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') checkEst.click();
+}));
+
+/* ---------- sample grid ---------- */
+const grid = document.getElementById('grid');
+const TOTAL_LIB = 10, TOTAL_FARM = 200;
+const FIT_LIB = 4, FIT_FARM = 20;
+let people = [];
+function buildGrid() {
+  if (!grid) return;
+  for (let i = 0; i < TOTAL_LIB + TOTAL_FARM; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot-p';
+    d.style.setProperty('--i', i);
+    const isLib = i < TOTAL_LIB;
+    if (isLib) d.classList.add('lib');
+    // mark fitting ones: first FIT_LIB libs, first FIT_FARM farmers
+    const fits = isLib ? (i < FIT_LIB) : ((i - TOTAL_LIB) < FIT_FARM);
+    d.dataset.lib = isLib; d.dataset.fit = fits;
+    grid.appendChild(d); people.push(d);
+  }
+}
+buildGrid();
+let fitMode = false;
+document.getElementById('highlightFit')?.addEventListener('click', (e) => {
+  fitMode = !fitMode;
+  people.forEach(d => {
+    const isLib = d.dataset.lib === 'true';
+    const fits = d.dataset.fit === 'true';
+    d.classList.remove('fit-lib','fit-farm','dim');
+    if (fitMode) {
+      if (fits) d.classList.add(isLib ? 'fit-lib' : 'fit-farm');
+      else d.classList.add('dim');
+    }
+  });
+  e.target.textContent = fitMode ? '← 看回全部 210 人' : '只看「符合描述」的人 →';
+});
+
+/* ---------- area diagram + posterior ---------- */
+const sPrior = document.getElementById('sPrior');
+const sLike = document.getElementById('sLike');
+const sNot = document.getElementById('sNot');
+const aHyp = document.getElementById('aHyp'), aAlt = document.getElementById('aAlt');
+const aFitLib = document.getElementById('aFitLib'), aFitFarm = document.getElementById('aFitFarm');
+function updateArea() {
+  if (!sPrior) return;
+  const p = +sPrior.value / 100;       // P(H)
+  const lh = +sLike.value / 100;       // P(E|H)
+  const ln = +sNot.value / 100;        // P(E|¬H)
+  document.getElementById('vPrior').textContent = Math.round(p*100)+'%';
+  document.getElementById('vLike').textContent = Math.round(lh*100)+'%';
+  document.getElementById('vNot').textContent = Math.round(ln*100)+'%';
+
+  // left block width = P(H)
+  aHyp.style.width = (p*100)+'%';
+  aAlt.style.width = ((1-p)*100)+'%';
+  // fitting strips grow from bottom
+  aFitLib.style.width = (p*100)+'%';
+  aFitLib.style.height = (lh*100)+'%';
+  aFitFarm.style.width = ((1-p)*100)+'%';
+  aFitFarm.style.height = (ln*100)+'%';
+
+  const num = p*lh;
+  const den = p*lh + (1-p)*ln;
+  const post = den === 0 ? 0 : num/den;
+  document.getElementById('postOut').textContent = (post*100).toFixed(1)+'%';
+}
+[sPrior, sLike, sNot].forEach(s => s && s.addEventListener('input', updateArea));
+updateArea();
+
+/* ---------- predict-then-verify ---------- */
+const lockGuess = document.getElementById('lockGuess');
+const guessPost = document.getElementById('guessPost');
+const guessResult = document.getElementById('guessResult');
+lockGuess?.addEventListener('click', () => {
+  const g = parseFloat(guessPost.value);
+  const actual = 16.7;
+  let msg;
+  if (isNaN(g)) {
+    msg = '先填一個數字再鎖定吧——隨便猜也沒關係，重點是<b>先有立場</b>。';
+    guessResult.innerHTML = msg;
+    guessResult.classList.add('show');
+    return;
+  }
+  const diff = Math.abs(g - actual);
+  let comment;
+  if (diff <= 5) comment = '很準！你的直覺已經抓到「比例會被先驗大幅拉低」這件事。';
+  else if (g > 40) comment = '比實際高不少——這正是大多數人的直覺：被「40% 似然」帶著走，忘了先驗只有 10%、而且 ¬H 那邊基數很大。';
+  else comment = '不錯的方向。';
+  guessResult.innerHTML = '你猜 <b>' + g + '%</b>，實際答案是 <b>' + actual + '%</b>。' + comment +
+    ' 現在拉拉下面的滑桿，看面積怎麼把這個數字算出來。';
+  guessResult.classList.add('show');
+  lockGuess.textContent = '已鎖定';
+  lockGuess.disabled = true; lockGuess.style.opacity = '0.6'; lockGuess.style.cursor = 'default';
+  guessPost.disabled = true;
+});
+guessPost?.addEventListener('keydown', e => { if (e.key === 'Enter') lockGuess.click(); });
+
+/* ---------- formula token notes ---------- */
+document.querySelectorAll('.tok[data-tok]').forEach(t => {
+  t.addEventListener('click', () => {
+    const key = t.getAttribute('data-tok');
+    document.querySelectorAll('.tok-note').forEach(n => {
+      n.classList.toggle('show', n.getAttribute('data-note') === key);
+    });
+  });
+});
+</script>
+</body>
+</html>

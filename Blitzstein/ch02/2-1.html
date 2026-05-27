@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2.1 The importance of thinking conditionally · Blitzstein & Hwang</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Spline+Sans+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+
+  :root {
+    --bg: #0e1116;
+    --bg-soft: #161b22;
+    --panel: #1c232e;
+    --ink: #e8e2d4;
+    --ink-soft: #a9b1bd;
+    --ink-faint: #6b7480;
+    --line: #2a323d;
+    --belief: #c9a227;     /* 信念 / 機率 = 金 */
+    --belief-soft: #6e5a18;
+    --evi: #d4663a;        /* 證據 / 條件 = 橘 */
+    --evi-soft: #5c2f18;
+    --good: #5fb87a;
+    --bad: #d65f6e;
+    --accent: #d4663a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(212,102,58,0.08), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 90% 10%, rgba(201,162,39,0.05), transparent 50%),
+      var(--bg);
+    color: var(--ink);
+    font-family: 'Noto Sans TC', sans-serif;
+    line-height: 1.78;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 9999; mix-blend-mode: overlay;
+  }
+
+  .wrap { max-width: 720px; margin: 0 auto; padding: 0 24px; }
+
+  /* progress rail + dots */
+  #rail { position: fixed; top: 0; left: 0; right: 0; height: 3px; background: var(--line); z-index: 100; }
+  #rail-fill { height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--belief), var(--evi)); transition: width 0.4s ease; }
+  #dots { position: fixed; right: 22px; top: 50%; transform: translateY(-50%);
+    display: flex; flex-direction: column; gap: 13px; z-index: 100; }
+  #dots button { width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid var(--ink-faint);
+    background: transparent; cursor: pointer; padding: 0; transition: all 0.25s; }
+  #dots button.active { background: var(--evi); border-color: var(--evi); transform: scale(1.35); }
+  #dots button.done { background: var(--belief); border-color: var(--belief); }
+  @media (max-width: 720px) { #dots { display: none; } }
+
+  /* hero */
+  header {
+    min-height: 90vh; display: flex; flex-direction: column;
+    justify-content: center; padding: 60px 0;
+  }
+  .eyebrow {
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.78rem;
+    letter-spacing: 0.32em; text-transform: uppercase;
+    color: var(--evi); margin-bottom: 22px;
+  }
+  h1 {
+    font-family: 'Newsreader', serif; font-weight: 500;
+    font-size: clamp(2.4rem, 6.5vw, 4rem); line-height: 1.08;
+    letter-spacing: -0.01em; margin-bottom: 14px;
+  }
+  h1 .zh {
+    display: block; font-family: 'Noto Sans TC'; font-weight: 500;
+    font-size: clamp(1.1rem, 2.6vw, 1.4rem); color: var(--ink-soft);
+    margin-top: 16px; letter-spacing: 0.02em;
+  }
+  .hero-quote {
+    font-family: 'Newsreader', serif; font-style: italic;
+    font-size: clamp(1.15rem, 2.6vw, 1.5rem); color: var(--ink);
+    max-width: 32ch; margin-top: 36px; line-height: 1.55;
+    border-left: 2px solid var(--evi); padding-left: 22px;
+  }
+  .hero-quote .src {
+    display: block; font-style: normal; font-family: 'Spline Sans Mono', monospace;
+    font-size: 0.74rem; color: var(--ink-faint); letter-spacing: 0.15em;
+    margin-top: 14px; text-transform: uppercase;
+  }
+  .scroll-hint {
+    margin-top: 56px; font-family: 'Spline Sans Mono', monospace;
+    font-size: 0.8rem; color: var(--ink-faint); letter-spacing: 0.1em;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .scroll-hint .arrow { animation: bob 1.8s ease-in-out infinite; }
+  @keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(6px)} }
+
+  /* stages */
+  .stage {
+    padding: 70px 0 90px; border-top: 1px solid var(--line);
+    opacity: 0; transform: translateY(28px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+  .stage.visible { opacity: 1; transform: none; }
+  .stage-tag {
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.74rem;
+    letter-spacing: 0.28em; text-transform: uppercase;
+    color: var(--evi); margin-bottom: 16px; display: flex; align-items: center; gap: 12px;
+  }
+  .stage-tag::before { content: ""; width: 30px; height: 1px; background: var(--evi); }
+  h2 {
+    font-family: 'Newsreader', serif; font-weight: 500;
+    font-size: clamp(1.7rem, 4.2vw, 2.4rem); line-height: 1.2;
+    margin-bottom: 22px; letter-spacing: -0.01em;
+  }
+  p { margin-bottom: 18px; color: var(--ink-soft); font-size: 1.04rem; }
+  p strong { color: var(--ink); font-weight: 500; }
+  p em { color: var(--belief); font-style: normal; }
+  .lead { color: var(--ink); font-size: 1.1rem; }
+
+  /* book quote — direct excerpt */
+  .bookq {
+    border-left: 2px solid var(--belief);
+    background: rgba(201,162,39,0.04);
+    padding: 18px 22px; margin: 24px 0;
+    font-family: 'Newsreader', serif; font-size: 1.07rem; line-height: 1.65;
+    color: var(--ink); border-radius: 0 6px 6px 0;
+  }
+  .bookq .src {
+    display: block; font-family: 'Spline Sans Mono', monospace;
+    font-size: 0.7rem; color: var(--ink-faint); letter-spacing: 0.15em;
+    margin-top: 12px; text-transform: uppercase; font-style: normal;
+  }
+  .bookq b { color: var(--belief); font-weight: 600; }
+
+  /* notation block — progressive reveal */
+  .notation {
+    background: var(--bg-soft); border: 1px solid var(--line); border-radius: 10px;
+    padding: 22px 26px; margin: 24px 0;
+  }
+  .notation .nrow {
+    font-family: 'Spline Sans Mono', monospace;
+    font-size: 1.02rem; padding: 9px 0;
+    border-bottom: 1px dashed var(--line);
+    color: var(--ink-soft); opacity: 0; transform: translateX(-10px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    transition-delay: calc(var(--i) * 0.18s);
+    display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap;
+  }
+  .notation.visible .nrow { opacity: 1; transform: none; }
+  .notation .nrow:last-child { border-bottom: none; }
+  .notation .nrow .sym { color: var(--belief); font-weight: 500; min-width: 220px; }
+  .notation .nrow .desc { color: var(--ink-soft); font-family: 'Noto Sans TC'; font-size: 0.96rem; }
+  .notation .nrow.end .sym { color: var(--evi); }
+
+  /* question card */
+  .q {
+    background: linear-gradient(160deg, var(--panel), var(--bg-soft));
+    border: 1px solid var(--line); border-radius: 14px;
+    padding: 26px 24px; margin: 30px 0;
+    box-shadow: 0 14px 40px rgba(0,0,0,0.35);
+    position: relative; overflow: hidden;
+  }
+  .q::before {
+    content: "?"; position: absolute; top: -18px; right: 4px;
+    font-family: 'Newsreader', serif; font-size: 8rem; font-style: italic;
+    color: rgba(212,102,58,0.07); pointer-events: none;
+  }
+  .q-label {
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.72rem;
+    letter-spacing: 0.2em; text-transform: uppercase; color: var(--evi);
+    margin-bottom: 14px;
+  }
+  .q-text { color: var(--ink); font-size: 1.06rem; font-weight: 500;
+    margin-bottom: 20px; line-height: 1.6; }
+  .q-text .small { display:block; font-weight:400; color: var(--ink-soft);
+    font-size: 0.93rem; margin-top: 8px; }
+
+  /* multi-choice options */
+  .opts { display: flex; flex-direction: column; gap: 11px; }
+  .opt {
+    text-align: left; background: var(--bg); border: 1px solid var(--line);
+    color: var(--ink-soft); padding: 13px 18px; border-radius: 9px;
+    cursor: pointer; font-family: inherit; font-size: 0.98rem;
+    transition: all 0.2s; position: relative; line-height: 1.45;
+  }
+  .opt:hover:not(.locked) { border-color: var(--evi); color: var(--ink); transform: translateX(3px); }
+  .opt.correct { border-color: var(--good); background: rgba(95,184,122,0.1); color: var(--ink); }
+  .opt.wrong { border-color: var(--bad); background: rgba(214,95,110,0.08); }
+  .opt .mark { float: right; font-weight: 700; }
+
+  /* feedback */
+  .feedback {
+    margin-top: 18px; padding: 16px 18px; border-radius: 9px;
+    background: var(--bg); border-left: 3px solid var(--evi);
+    font-size: 0.97rem; color: var(--ink-soft); display: none;
+  }
+  .feedback.show { display: block; animation: fadeUp 0.45s ease; }
+  .feedback strong { color: var(--ink); }
+  .feedback b { color: var(--evi); }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+
+  /* reflection textarea */
+  .reflect textarea {
+    width: 100%; background: var(--bg); border: 1px solid var(--line);
+    color: var(--ink); border-radius: 9px; padding: 14px; font-family: inherit;
+    font-size: 0.98rem; resize: vertical; min-height: 90px; line-height: 1.6;
+  }
+  .reflect textarea:focus { outline: none; border-color: var(--evi); }
+
+  .btn {
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.85rem;
+    letter-spacing: 0.05em; background: var(--evi); color: #fff; border: none;
+    padding: 11px 22px; border-radius: 8px; cursor: pointer; margin-top: 14px;
+    transition: all 0.2s;
+  }
+  .btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+  .btn:disabled { opacity: 0.5; cursor: default; transform: none; }
+  .btn.ghost { background: transparent; border: 1px solid var(--line); color: var(--ink-soft); }
+
+  /* hidden-conditions list */
+  .conditions-list {
+    display: flex; flex-direction: column; gap: 12px; margin: 18px 0 6px;
+  }
+  .cond-item {
+    background: var(--bg); border: 1px solid var(--line); border-radius: 9px;
+    padding: 14px 18px;
+  }
+  .cond-item .prob {
+    font-family: 'Spline Sans Mono', monospace; color: var(--belief);
+    font-size: 0.98rem; margin-bottom: 8px;
+  }
+  .cond-item .hidden-cond {
+    font-size: 0.93rem; color: var(--ink-soft); display: none;
+    padding-top: 10px; margin-top: 8px; border-top: 1px dashed var(--line);
+  }
+  .cond-item .hidden-cond.show { display: block; animation: fadeUp 0.4s ease; }
+  .cond-item .hidden-cond b { color: var(--evi); }
+
+  /* mantra */
+  .mantra {
+    font-family: 'Newsreader', serif; font-style: italic;
+    font-size: clamp(1.7rem, 5vw, 2.6rem); line-height: 1.35;
+    color: var(--ink); text-align: center; margin: 30px 0;
+    padding: 30px 10px;
+  }
+  .mantra b { font-style: normal; color: var(--evi); font-weight: 600; }
+  .mantra .zh {
+    display: block; font-family: 'Noto Sans TC'; font-style: normal;
+    font-size: 1rem; color: var(--ink-faint); margin-top: 18px;
+    letter-spacing: 0.08em;
+  }
+
+  /* gated content */
+  .gated { display: none; }
+  .gated.show { display: block; animation: fadeUp 0.55s ease; }
+
+  /* finale recap */
+  .finale { text-align: left; padding: 80px 0 60px; }
+  .recap { display: grid; gap: 14px; margin: 30px 0; }
+  .recap-item {
+    background: var(--bg-soft); border: 1px solid var(--line); border-radius: 10px;
+    padding: 16px 20px; display: flex; gap: 14px; align-items: flex-start;
+  }
+  .recap-item .num {
+    font-family: 'Spline Sans Mono', monospace; color: var(--evi);
+    font-size: 0.85rem; font-weight: 600; flex-shrink: 0; padding-top: 2px;
+  }
+  .recap-item p { margin: 0; font-size: 0.96rem; color: var(--ink-soft); }
+  .recap-item b { color: var(--ink); }
+
+  .next-up {
+    background: rgba(212,102,58,0.06); border: 1px dashed var(--evi);
+    border-radius: 10px; padding: 18px 22px; margin: 30px 0 0;
+    font-size: 0.97rem; color: var(--ink-soft);
+  }
+  .next-up b { color: var(--evi); }
+  .next-up .formula {
+    display: block; font-family: 'Spline Sans Mono', monospace;
+    color: var(--belief); margin-top: 8px;
+  }
+
+  footer {
+    text-align: center; padding: 50px 0; border-top: 1px solid var(--line);
+    color: var(--ink-faint); font-size: 0.85rem;
+  }
+
+  .inline-e { color: var(--evi); font-weight: 500; }
+  .inline-b { color: var(--belief); font-weight: 500; }
+  /* inline math notation (no MathJax — keep notation in monospace + subtle background) */
+  code {
+    font-family: 'Spline Sans Mono', ui-monospace, monospace;
+    font-size: 0.92em;
+    color: var(--belief);
+    background: rgba(201,162,39,0.08);
+    padding: 1px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+  .src-tag {
+    display: inline-block; font-family: 'Spline Sans Mono', monospace;
+    font-size: 0.68rem; color: var(--ink-faint); letter-spacing: 0.12em;
+    text-transform: uppercase; margin-left: 10px;
+    padding: 2px 8px; border: 1px solid var(--line); border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+
+<div id="rail"><div id="rail-fill"></div></div>
+<nav id="dots"></nav>
+
+<div class="wrap">
+
+  <!-- ============ HERO ============ -->
+  <header>
+    <div class="eyebrow">Chapter 2 · §2.1</div>
+    <h1>The importance of<br>thinking conditionally
+      <span class="zh">為什麼「有條件地」思考如此重要</span>
+    </h1>
+    <div class="hero-quote">
+      How should we update our beliefs in light of the evidence we observe?
+      <span class="src">— Chapter 2 opening, p.45</span>
+    </div>
+    <div class="scroll-hint"><span class="arrow">↓</span> 往下捲動,跟著 §2.1 的四段話走一遍</div>
+  </header>
+
+  <!-- ============ STAGE 1: Para 1 — all probabilities are conditional ============ -->
+  <section class="stage" id="s1">
+    <div class="stage-tag">第一段 · 一個強而有力的宣告</div>
+    <h2>其實,所有機率都是條件機率<span class="src-tag">p.45 ¶1</span></h2>
+
+    <p>本節開頭,Blitzstein &amp; Hwang 主張:條件機率不只是工具,而是 <strong>scientific / medical / legal reasoning</strong> 的基礎 — 它是「把證據以邏輯一致的方式併入我們對世界的理解」的方法。</p>
+
+    <p>然後他們丟出一句很容易被讀者滑過去的、極為強烈的宣告:</p>
+
+    <div class="bookq">
+      A useful perspective is that <b>all probabilities are conditional</b>; whether or not it's written explicitly, there is always background knowledge (or assumptions) built into every probability.
+      <span class="src">— §2.1 ¶1, p.45</span>
+    </div>
+
+    <p>意思是:就算一個機率寫起來「沒帶條件」(像是 <code>P(A)</code>,沒有那一槓),它背後仍然站著一整片你預設成立的假設。沒有真正「無條件」的機率。</p>
+
+    <div class="q" data-q="hidden">
+      <div class="q-label">想一下,再展開</div>
+      <div class="q-text">下面三個看起來「無條件」的機率敘述,各自隱藏了哪些你沒寫出來、但其實非有不可的假設?
+        <span class="small">先在心裡(或紙上)列一兩條,再按按鈕展開對照。</span>
+      </div>
+
+      <div class="conditions-list">
+        <div class="cond-item">
+          <div class="prob">P(硬幣正面) = 1/2</div>
+          <div class="hidden-cond" data-c="0">
+            隱含的條件至少包括:<b>這是一枚公正的硬幣</b>(沒有偏心)、<b>丟擲方式沒有作弊</b>、<b>硬幣不會卡在邊緣</b>、<b>機率的定義採用古典等可能性</b>。
+            一旦你接到一枚會落地時 60% 朝正面的硬幣,1/2 立刻失效 — 因為「公正」這個沒寫出來的條件被推翻了。
+          </div>
+        </div>
+        <div class="cond-item">
+          <div class="prob">P(明天台北降雨) = 30%</div>
+          <div class="hidden-cond" data-c="1">
+            這個數字一定是某個氣象模型在<b>給定當前氣象觀測(氣壓、雲圖、洋流…)、給定季節、給定模型本身的所有假設</b>之下算出來的。
+            不同模型、不同觀測時間,給的數字會不同。所謂「明天降雨機率 30%」其實是 P(明天降雨 | 今天我們知道的所有氣象資訊與模型假設)。
+          </div>
+        </div>
+        <div class="cond-item">
+          <div class="prob">P(從一副牌抽到 ace) = 4/52</div>
+          <div class="hidden-cond" data-c="2">
+            隱含:<b>這是一副標準的 52 張牌</b>(沒有少張、沒有偷塞)、<b>抽牌是均勻隨機的</b>、<b>每一張被抽中的機會相等</b>。
+            若有人事先把 ace 從牌堆裡抽掉,4/52 立刻變成 0/51 — 機率隨「我們關於牌堆的條件」而變。
+          </div>
+        </div>
+      </div>
+
+      <button class="btn" id="reveal-conds">展開三個的隱藏條件</button>
+    </div>
+
+    <p class="lead">所以當你以後看到 <code>P(某事)</code>,腦中要習慣性地問:「<em>給定什麼?</em>」 — 那些沒寫出來的東西,常常才是真正決定數字的關鍵。</p>
+  </section>
+
+  <!-- ============ STAGE 2: Para 2 — the rain example ============ -->
+  <section class="stage" id="s2">
+    <div class="stage-tag">第二段 · 一個你每天都在做的條件更新</div>
+    <h2>今天會下雨嗎?<span class="src-tag">p.45–46 ¶2</span></h2>
+
+    <p>書中接著舉了一個極為日常的例子,把「持續以證據更新信念」這件事拆解清楚。設 <code>R</code> 是「今天下雨」這個事件,我們從早上一張白紙開始:</p>
+
+    <div class="notation" id="notation-rain">
+      <div class="nrow" style="--i:0">
+        <span class="sym">P(R)</span>
+        <span class="desc">早上,還沒看窗外。對「今天下雨」的初始信念。</span>
+      </div>
+      <div class="nrow" style="--i:1">
+        <span class="sym">P(R | C)</span>
+        <span class="desc">看到窗外烏雲密布(事件 C)。信念被更新,通常會上升。</span>
+      </div>
+      <div class="nrow" style="--i:2">
+        <span class="sym">P(R | C, B₁)</span>
+        <span class="desc">同時又起了風(B₁)。信念再更新。</span>
+      </div>
+      <div class="nrow" style="--i:3">
+        <span class="sym">P(R | C, B₁, …, Bₙ)</span>
+        <span class="desc">一整天累積了 n 個觀察 B₁,…,Bₙ。每多一筆證據,信念就再更新一次。</span>
+      </div>
+      <div class="nrow end" style="--i:4">
+        <span class="sym">P(R | 真的看到下雨)  =  1</span>
+        <span class="desc">事件 R 已然發生 — 條件機率坍縮成 1。</span>
+      </div>
+    </div>
+
+    <p>書中用了一個專有說法:當我們從 <code>P(R)</code> 移動到 <code>P(R | C)</code> 時,我們稱之為「<em>conditioning on C</em>」 — <em>對 C 取條件</em>。整個過程就是一連串的 conditioning:每多一筆證據,就把它放到條件這一邊,得到一個新的機率。</p>
+
+    <div class="q" data-q="rain-end">
+      <div class="q-label">驗證直覺</div>
+      <div class="q-text">當一天進行到最後,我們真的觀察到「下雨開始了」這件事 — 此時 <code>P(R | 看到下雨)</code> 等於多少?</div>
+      <div class="opts">
+        <button class="opt" data-correct="false">仍然是個小於 1 的數,比如 0.95</button>
+        <button class="opt" data-correct="false">回到一開始的 P(R)</button>
+        <button class="opt" data-correct="true">等於 1</button>
+      </div>
+      <div class="feedback" data-fb>
+        <strong>對,等於 1。</strong> 書中明寫:<em>"If eventually we observe that it does start raining, our conditional probability becomes 1."</em>
+        — 一旦你把「已發生的事」放到條件那一側,它在條件下的機率就必然是 1。這也是檢驗條件機率定義是否合理的最基本要求(§2.2 會把這件事正式寫成 <code>P(A | A) = 1</code>)。
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STAGE 3: Para 3 — conditioning as problem-solving strategy ============ -->
+  <section class="stage" id="s3">
+    <div class="stage-tag">第三段 · 不只更新信念,也是解題策略</div>
+    <h2>把大問題切成可吞嚥的小塊<span class="src-tag">p.46 ¶3</span></h2>
+
+    <p>接下來書中提醒讀者:條件機率的價值<strong>不止於</strong>「更新信念」 — 它同時是一個極強大的<em>問題解決策略(problem-solving strategy)</em>。</p>
+
+    <div class="bookq">
+      Just as in computer science a common strategy is to break a large problem up into <b>bite-size pieces</b> (or even byte-size pieces), in probability a common strategy is to reduce a complicated probability problem to a bunch of simpler conditional probability problems.
+      <span class="src">— §2.1 ¶3, p.46</span>
+    </div>
+
+    <p>用 CS 來類比:程式設計者把大問題切成小函式;機率學者把複雜的機率問題切成「先發生 A、再給定 A 看 B」這種小塊。書中也預告了一個之後會詳述的具體技巧:</p>
+
+    <p><span class="inline-e">first-step analysis</span> — 一種針對「多階段隨機實驗」的遞迴解法,讓你<strong>對第一步取條件</strong>,把問題化簡成「剩下幾步」的相同子問題。<span class="src-tag">§2.7 將詳述</span></p>
+
+    <p class="lead">所以從這一段開始,你要把條件機率<strong>兩個</strong>身分都記在心裡:</p>
+
+    <ul style="list-style:none; padding-left:0; margin: 18px 0;">
+      <li style="margin-bottom: 14px; padding-left: 18px; border-left: 2px solid var(--belief);">
+        <strong>身分一(認識論):</strong>把新證據合進舊信念 — 也就是 <em>更新</em>。
+      </li>
+      <li style="padding-left: 18px; border-left: 2px solid var(--evi);">
+        <strong>身分二(方法論):</strong>把複雜問題拆成「對某事件取條件後」的子問題 — 也就是 <em>解題</em>。
+      </li>
+    </ul>
+  </section>
+
+  <!-- ============ STAGE 4: The mantra ============ -->
+  <section class="stage" id="s4">
+    <div class="stage-tag">結語 · 為什麼書要這樣鋪陳</div>
+    <h2>所以,作者要你記住這句話<span class="src-tag">p.46 結尾</span></h2>
+
+    <p>因為條件機率同時扮演前面兩個角色 — <em>既是更新信念的機制,也是解題的策略</em> — Blitzstein &amp; Hwang 把整章的核心精神濃縮成一行,置中、突出地放在 §2.1 的最後:</p>
+
+    <div class="mantra">
+      Conditioning is the <b>soul</b> of statistics.
+      <span class="zh">「條件,是統計的靈魂。」</span>
+    </div>
+
+    <div class="q reflect" data-q="soul">
+      <div class="q-label">細讀一句話</div>
+      <div class="q-text">為什麼作者選了「<em>soul</em>(靈魂)」這個字,而不是「foundation(基礎)」、「tool(工具)」、或「core idea(核心觀念)」?
+        <span class="small">先試著用一兩句話講出來,再按下面看書的鋪陳是怎麼為這個字背書的。</span>
+      </div>
+      <textarea placeholder="寫下你的理解⋯⋯(不會被儲存)"></textarea>
+      <button class="btn" data-reveal>看看 §2.1 怎麼為這個字鋪陳</button>
+      <div class="feedback" data-fb>
+        書本身已經給了完整的鋪陳:
+        <ul style="margin: 12px 0 0 18px; color: var(--ink-soft);">
+          <li style="margin-bottom:8px;"><strong>¶1 說:</strong>「<b>所有</b>機率都是條件機率」 — 那麼條件就不是某個工具,而是 <em>無所不在</em>。</li>
+          <li style="margin-bottom:8px;"><strong>¶2 說:</strong>條件是<em>更新信念</em>的機制 — 是知識如何隨證據演化的核心動力。</li>
+          <li><strong>¶3 說:</strong>條件還是<em>解題</em>的策略 — 是統計工作者在實務中「動起來」的方式。</li>
+        </ul>
+        <p style="margin-top: 12px;">「foundation」只是「在底下撐著」、「tool」只是「拿來用一下」。
+        <b>soul</b> 同時暗示 <em>無所不在</em>(滲透在每一個機率裡)、<em>賦予生命</em>(讓信念能隨時間更新)、<em>定義本質</em>(沒有它整個統計就空了)。
+        ¶1+¶2+¶3 加起來,正好對應這三層意思。所以這個字選得相當精確 — 不是修辭裝飾。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FINALE ============ -->
+  <section class="stage finale" id="s5">
+    <div class="stage-tag">完成 · §2.1 四段話走完了</div>
+    <h2>回顧:這節留下了什麼?</h2>
+
+    <div class="recap">
+      <div class="recap-item"><span class="num">¶1</span><p><b>所有機率都是條件機率。</b>沒寫出來的條件,常常才是決定數字的關鍵。</p></div>
+      <div class="recap-item"><span class="num">¶2</span><p><b>條件機率是「更新信念」的機制。</b>下雨例子:P(R) → P(R|C) → P(R|C, B₁,…,Bₙ) → 真下雨時變 1。</p></div>
+      <div class="recap-item"><span class="num">¶3</span><p><b>條件機率也是「解題策略」。</b>把複雜問題切成 bite-size 的子問題;§2.7 的 first-step analysis 是其中一招。</p></div>
+      <div class="recap-item"><span class="num">¶4</span><p><b>Mantra:</b> <em>"Conditioning is the soul of statistics."</em> — 無所不在、賦予生命、定義本質。</p></div>
+    </div>
+
+    <div class="next-up">
+      <b>§2.1 給你的是「為什麼」與「直覺」。</b> 下一節 §2.2 <em>Definition and intuition</em> 會把這份直覺變成正式的數學定義:
+      <span class="formula">P(A | B) = P(A ∩ B) / P(B)</span>
+      並用 pebble world 把幾何意義畫出來。
+    </div>
+  </section>
+
+  <footer>
+    Blitzstein &amp; Hwang, <em>Introduction to Probability</em> · §2.1 The importance of thinking conditionally · 互動式閱讀版
+  </footer>
+
+</div>
+
+<script>
+/* ---------- progress + nav dots + reveal-on-scroll ---------- */
+const stages = [...document.querySelectorAll('.stage')];
+const railFill = document.getElementById('rail-fill');
+const dotsNav = document.getElementById('dots');
+
+stages.forEach((st, i) => {
+  const b = document.createElement('button');
+  b.title = '第 ' + (i+1) + ' 段';
+  b.onclick = () => st.scrollIntoView({behavior:'smooth', block:'start'});
+  dotsNav.appendChild(b);
+});
+const dotBtns = [...dotsNav.children];
+
+const io = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('visible');
+      // also reveal nested notation blocks
+      const nb = e.target.querySelector('.notation');
+      if (nb) nb.classList.add('visible');
+    }
+  });
+}, { threshold: 0.12 });
+stages.forEach(s => io.observe(s));
+
+function onScroll() {
+  const h = document.documentElement;
+  const pct = h.scrollTop / (h.scrollHeight - h.clientHeight) * 100;
+  railFill.style.width = pct + '%';
+  let active = 0;
+  stages.forEach((s, i) => {
+    const r = s.getBoundingClientRect();
+    if (r.top < window.innerHeight * 0.5) active = i;
+  });
+  dotBtns.forEach((d, i) => {
+    d.classList.toggle('active', i === active);
+    d.classList.toggle('done', i < active);
+  });
+}
+window.addEventListener('scroll', onScroll); onScroll();
+
+/* ---------- multi-choice (rain-end) ---------- */
+document.querySelectorAll('.q[data-q] .opts').forEach(opts => {
+  const card = opts.closest('.q');
+  const fb = card.querySelector('[data-fb]');
+  opts.querySelectorAll('.opt').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (opts.dataset.locked) return;
+      opts.dataset.locked = '1';
+      const correct = btn.getAttribute('data-correct') === 'true';
+      opts.querySelectorAll('.opt').forEach(o => {
+        o.classList.add('locked');
+        if (o.getAttribute('data-correct') === 'true') {
+          o.classList.add('correct');
+          o.insertAdjacentHTML('beforeend', '<span class="mark" style="color:var(--good)">✓</span>');
+        }
+      });
+      if (!correct) {
+        btn.classList.add('wrong');
+        btn.insertAdjacentHTML('beforeend', '<span class="mark" style="color:var(--bad)">✕</span>');
+      }
+      fb && fb.classList.add('show');
+    });
+  });
+});
+
+/* ---------- reflection reveal (soul) ---------- */
+document.querySelectorAll('[data-reveal]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const fb = btn.closest('.q').querySelector('[data-fb]');
+    fb.classList.add('show');
+    btn.disabled = true;
+    btn.textContent = '已展開 ✓';
+  });
+});
+
+/* ---------- reveal hidden-conditions ---------- */
+document.getElementById('reveal-conds')?.addEventListener('click', (e) => {
+  document.querySelectorAll('.hidden-cond').forEach((el, idx) => {
+    setTimeout(() => el.classList.add('show'), idx * 180);
+  });
+  e.target.disabled = true;
+  e.target.textContent = '已展開 ✓';
+});
+</script>
+</body>
+</html>

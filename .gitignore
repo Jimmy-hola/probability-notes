@@ -1,0 +1,7 @@
+# 原書 PDF(版權,不推上去)
+*.pdf
+
+# macOS
+.DS_Store
+.DS_Store?
+._*

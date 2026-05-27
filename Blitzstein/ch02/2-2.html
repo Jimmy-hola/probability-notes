@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2.2 Definition and intuition · Blitzstein & Hwang</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Spline+Sans+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+
+  :root {
+    --bg: #0e1116;
+    --bg-soft: #161b22;
+    --panel: #1c232e;
+    --ink: #e8e2d4;
+    --ink-soft: #a9b1bd;
+    --ink-faint: #6b7480;
+    --line: #2a323d;
+    --A: #c9a227;        /* event A 金 — 我們想知道的事件 */
+    --A-soft: #5a4810;
+    --B: #6cb0d4;        /* event B 藍 — 觀察到的證據(條件) */
+    --B-soft: #20445b;
+    --AB: #5fb87a;       /* A ∩ B 綠 — 兩者同時發生 */
+    --AB-soft: #1f4a2a;
+    --good: #5fb87a;
+    --bad: #d65f6e;
+    --accent: #6cb0d4;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(108,176,212,0.08), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 90% 10%, rgba(201,162,39,0.05), transparent 50%),
+      var(--bg);
+    color: var(--ink);
+    font-family: 'Noto Sans TC', sans-serif;
+    line-height: 1.78;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 9999; mix-blend-mode: overlay;
+  }
+
+  .wrap { max-width: 720px; margin: 0 auto; padding: 0 24px; }
+
+  /* progress rail + dots */
+  #rail { position: fixed; top: 0; left: 0; right: 0; height: 3px; background: var(--line); z-index: 100; }
+  #rail-fill { height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--A), var(--B)); transition: width 0.4s ease; }
+  #dots { position: fixed; right: 22px; top: 50%; transform: translateY(-50%);
+    display: flex; flex-direction: column; gap: 13px; z-index: 100; }
+  #dots button { width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid var(--ink-faint);
+    background: transparent; cursor: pointer; padding: 0; transition: all 0.25s; }
+  #dots button.active { background: var(--B); border-color: var(--B); transform: scale(1.35); }
+  #dots button.done { background: var(--A); border-color: var(--A); }
+  @media (max-width: 720px) { #dots { display: none; } }
+
+  /* hero */
+  header {
+    min-height: 90vh; display: flex; flex-direction: column;
+    justify-content: center; padding: 60px 0;
+  }
+  .eyebrow {
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.78rem;
+    letter-spacing: 0.32em; text-transform: uppercase;
+    color: var(--B); margin-bottom: 22px;
+  }
+  h1 {
+    font-family: 'Newsreader', serif; font-weight: 500;
+    font-size: clamp(2.4rem, 6.5vw, 4rem); line-height: 1.08;
+    letter-spacing: -0.01em; margin-bottom: 14px;
+  }
+  h1 .zh {
+    display: block; font-family: 'Noto Sans TC'; font-weight: 500;
+    font-size: clamp(1.1rem, 2.6vw, 1.4rem); color: var(--ink-soft);
+    margin-top: 16px; letter-spacing: 0.02em;
+  }
+  .hero-quote {
+    font-family: 'Newsreader', serif; font-style: italic;
+    font-size: clamp(1.15rem, 2.6vw, 1.5rem); color: var(--ink);
+    max-width: 36ch; margin-top: 36px; line-height: 1.55;
+    border-left: 2px solid var(--B); padding-left: 22px;
+  }
+  .hero-quote .src {
+    display: block; font-style: normal; font-family: 'Spline Sans Mono', monospace;
+    font-size: 0.74rem; color: var(--ink-faint); letter-spacing: 0.15em;
+    margin-top: 14px; text-transform: uppercase;
+  }
+  .scroll-hint {
+    margin-top: 56px; font-family: 'Spline Sans Mono', monospace;
+    font-size: 0.8rem; color: var(--ink-faint); letter-spacing: 0.1em;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .scroll-hint .arrow { animation: bob 1.8s ease-in-out infinite; }
+  @keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(6px)} }
+
+  /* stages */
+  .stage {
+    padding: 70px 0 90px; border-top: 1px solid var(--line);
+    opacity: 0; transform: translateY(28px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+  .stage.visible { opacity: 1; transform: none; }
+  .stage-tag {
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.74rem;
+    letter-spacing: 0.28em; text-transform: uppercase;
+    color: var(--B); margin-bottom: 16px; display: flex; align-items: center; gap: 12px;
+  }
+  .stage-tag::before { content: ""; width: 30px; height: 1px; background: var(--B); }
+  h2 {
+    font-family: 'Newsreader', serif; font-weight: 500;
+    font-size: clamp(1.7rem, 4.2vw, 2.4rem); line-height: 1.2;
+    margin-bottom: 22px; letter-spacing: -0.01em;
+  }
+  h3 {
+    font-family: 'Newsreader', serif; font-weight: 500;
+    font-size: 1.3rem; line-height: 1.3; margin: 36px 0 14px;
+    color: var(--ink);
+  }
+  p { margin-bottom: 18px; color: var(--ink-soft); font-size: 1.04rem; }
+  p strong { color: var(--ink); font-weight: 500; }
+  p em { color: var(--A); font-style: normal; }
+  .lead { color: var(--ink); font-size: 1.1rem; }
+
+  /* book quote */
+  .bookq {
+    border-left: 2px solid var(--A);
+    background: rgba(201,162,39,0.04);
+    padding: 18px 22px; margin: 24px 0;
+    font-family: 'Newsreader', serif; font-size: 1.07rem; line-height: 1.65;
+    color: var(--ink); border-radius: 0 6px 6px 0;
+  }
+  .bookq .src {
+    display: block; font-family: 'Spline Sans Mono', monospace;
+    font-size: 0.7rem; color: var(--ink-faint); letter-spacing: 0.15em;
+    margin-top: 12px; text-transform: uppercase; font-style: normal;
+  }
+  .bookq b { color: var(--A); font-weight: 600; }
+  .bookq.def {
+    border-left-color: var(--B);
+    background: rgba(108,176,212,0.05);
+  }
+  .bookq.def b { color: var(--B); }
+
+  /* big centered formula */
+  .formula-hero {
+    text-align: center; margin: 30px 0;
+    font-family: 'Spline Sans Mono', monospace;
+    font-size: clamp(1.4rem, 4.2vw, 2.1rem);
+    color: var(--ink); padding: 26px 0;
+    border-top: 1px dashed var(--line);
+    border-bottom: 1px dashed var(--line);
+  }
+  .formula-hero .lhs { color: var(--A); }
+  .formula-hero .bar { color: var(--B); margin: 0 4px; font-weight: 600; }
+  .formula-hero .rhs-top { color: var(--AB); }
+  .formula-hero .rhs-bot { color: var(--B); }
+  .formula-hero .frac {
+    display: inline-flex; flex-direction: column; align-items: center;
+    vertical-align: middle; margin: 0 6px;
+  }
+  .formula-hero .frac > span:first-child {
+    border-bottom: 1.5px solid var(--ink-faint); padding: 0 14px 4px;
+  }
+  .formula-hero .frac > span:last-child { padding-top: 4px; }
+  .formula-hero .eq { margin: 0 14px; color: var(--ink-faint); }
+
+  /* notation block */
+  .notation {
+    background: var(--bg-soft); border: 1px solid var(--line); border-radius: 10px;
+    padding: 22px 26px; margin: 24px 0;
+  }
+  .notation .nrow {
+    font-family: 'Spline Sans Mono', monospace;
+    font-size: 1.02rem; padding: 9px 0;
+    border-bottom: 1px dashed var(--line);
+    color: var(--ink-soft); opacity: 0; transform: translateX(-10px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    transition-delay: calc(var(--i) * 0.18s);
+    display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap;
+  }
+  .notation.visible .nrow { opacity: 1; transform: none; }
+  .notation .nrow:last-child { border-bottom: none; }
+  .notation .nrow .sym { color: var(--A); font-weight: 500; min-width: 180px; }
+  .notation .nrow .desc { color: var(--ink-soft); font-family: 'Noto Sans TC'; font-size: 0.96rem; }
+  .notation .nrow.end .sym { color: var(--B); }
+
+  /* question card */
+  .q {
+    background: linear-gradient(160deg, var(--panel), var(--bg-soft));
+    border: 1px solid var(--line); border-radius: 14px;
+    padding: 26px 24px; margin: 30px 0;
+    box-shadow: 0 14px 40px rgba(0,0,0,0.35);
+    position: relative; overflow: hidden;
+  }
+  .q::before {
+    content: "?"; position: absolute; top: -18px; right: 4px;
+    font-family: 'Newsreader', serif; font-size: 8rem; font-style: italic;
+    color: rgba(108,176,212,0.07); pointer-events: none;
+  }
+  .q-label {
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.72rem;
+    letter-spacing: 0.2em; text-transform: uppercase; color: var(--B);
+    margin-bottom: 14px;
+  }
+  .q-text { color: var(--ink); font-size: 1.06rem; font-weight: 500;
+    margin-bottom: 20px; line-height: 1.6; }
+  .q-text .small { display:block; font-weight:400; color: var(--ink-soft);
+    font-size: 0.93rem; margin-top: 8px; }
+
+  .opts { display: flex; flex-direction: column; gap: 11px; }
+  .opt {
+    text-align: left; background: var(--bg); border: 1px solid var(--line);
+    color: var(--ink-soft); padding: 13px 18px; border-radius: 9px;
+    cursor: pointer; font-family: inherit; font-size: 0.98rem;
+    transition: all 0.2s; position: relative; line-height: 1.45;
+  }
+  .opt:hover:not(.locked) { border-color: var(--B); color: var(--ink); transform: translateX(3px); }
+  .opt.correct { border-color: var(--good); background: rgba(95,184,122,0.1); color: var(--ink); }
+  .opt.wrong { border-color: var(--bad); background: rgba(214,95,110,0.08); }
+  .opt .mark { float: right; font-weight: 700; }
+
+  .feedback {
+    margin-top: 18px; padding: 16px 18px; border-radius: 9px;
+    background: var(--bg); border-left: 3px solid var(--B);
+    font-size: 0.97rem; color: var(--ink-soft); display: none;
+  }
+  .feedback.show { display: block; animation: fadeUp 0.45s ease; }
+  .feedback strong { color: var(--ink); }
+  .feedback b { color: var(--B); }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+
+  .reflect textarea {
+    width: 100%; background: var(--bg); border: 1px solid var(--line);
+    color: var(--ink); border-radius: 9px; padding: 14px; font-family: inherit;
+    font-size: 0.98rem; resize: vertical; min-height: 90px; line-height: 1.6;
+  }
+  .reflect textarea:focus { outline: none; border-color: var(--B); }
+
+  .btn {
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.85rem;
+    letter-spacing: 0.05em; background: var(--B); color: #0e1116; border: none;
+    padding: 11px 22px; border-radius: 8px; cursor: pointer; margin-top: 14px;
+    transition: all 0.2s; font-weight: 600;
+  }
+  .btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+  .btn:disabled { opacity: 0.5; cursor: default; transform: none; }
+  .btn.ghost { background: transparent; border: 1px solid var(--line); color: var(--ink-soft); font-weight: 400; }
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  /* mantra */
+  .mantra {
+    font-family: 'Newsreader', serif; font-style: italic;
+    font-size: clamp(1.5rem, 4vw, 2.1rem); line-height: 1.4;
+    color: var(--ink); text-align: center; margin: 30px 0;
+    padding: 30px 10px;
+  }
+  .mantra b { font-style: normal; color: var(--B); font-weight: 600; }
+  .mantra .zh {
+    display: block; font-family: 'Noto Sans TC'; font-style: normal;
+    font-size: 1rem; color: var(--ink-faint); margin-top: 18px;
+    letter-spacing: 0.08em;
+  }
+
+  .gated { display: none; }
+  .gated.show { display: block; animation: fadeUp 0.55s ease; }
+
+  /* pebble world SVG */
+  .pebble-stage {
+    background: var(--bg-soft); border: 1px solid var(--line);
+    border-radius: 12px; padding: 18px; margin: 22px 0;
+  }
+  .pebble-stage svg { width: 100%; height: auto; display: block; }
+  .pebble-controls { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; justify-content: center; }
+  .pebble-controls button {
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.82rem;
+    background: var(--bg); border: 1px solid var(--line); color: var(--ink-soft);
+    padding: 8px 14px; border-radius: 7px; cursor: pointer; transition: all 0.2s;
+  }
+  .pebble-controls button:hover { border-color: var(--B); color: var(--ink); }
+  .pebble-controls button.active { background: var(--B); color: #0e1116; border-color: var(--B); font-weight: 600; }
+  .pebble-caption {
+    text-align: center; font-family: 'Newsreader', serif; font-style: italic;
+    color: var(--ink-soft); font-size: 0.97rem; margin-top: 12px;
+    min-height: 2.6em;
+  }
+  .pebble-caption b { font-style: normal; color: var(--B); font-weight: 600; }
+  .pebble-caption .gold { color: var(--A); font-style: normal; font-weight: 600; }
+  .pebble-caption .green { color: var(--AB); font-style: normal; font-weight: 600; }
+
+  /* frequentist 0/1 grid */
+  .freq-stage {
+    background: var(--bg-soft); border: 1px solid var(--line);
+    border-radius: 12px; padding: 22px; margin: 22px 0;
+  }
+  .freq-row {
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.95rem;
+    letter-spacing: 0.18em; padding: 6px 12px; margin: 4px 0;
+    color: var(--ink-faint); border-radius: 6px;
+    transition: all 0.4s ease; display: flex; gap: 14px; align-items: center;
+  }
+  .freq-row.in-B { background: rgba(108,176,212,0.10); color: var(--ink-soft); }
+  .freq-row.in-AB { background: rgba(95,184,122,0.14); color: var(--ink); font-weight: 600; }
+  .freq-row .digit-first { transition: color 0.3s; }
+  .freq-row .digit-second { transition: color 0.3s; }
+  .freq-row.in-B .digit-first { color: var(--B); }
+  .freq-row.in-AB .digit-second { color: var(--AB); }
+  .freq-row .tag {
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.7rem;
+    letter-spacing: 0.1em; margin-left: auto; padding: 2px 7px;
+    border-radius: 4px; opacity: 0; transition: opacity 0.4s;
+  }
+  .freq-row.in-B .tag { opacity: 1; background: rgba(108,176,212,0.18); color: var(--B); }
+  .freq-row.in-AB .tag { background: rgba(95,184,122,0.22); color: var(--AB); }
+  .freq-counter {
+    text-align: center; margin-top: 18px; padding: 14px;
+    background: var(--bg); border-radius: 8px;
+    font-family: 'Spline Sans Mono', monospace; font-size: 1rem;
+    color: var(--ink-soft);
+  }
+  .freq-counter .nB { color: var(--B); font-weight: 600; }
+  .freq-counter .nAB { color: var(--AB); font-weight: 600; }
+  .freq-counter .ans { color: var(--ink); font-weight: 600; }
+
+  /* family / two-children grid */
+  .family-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+    margin: 22px 0;
+  }
+  .family-cell {
+    background: var(--bg-soft); border: 2px solid var(--line);
+    border-radius: 10px; padding: 18px 8px;
+    text-align: center; transition: all 0.4s ease;
+    position: relative;
+  }
+  .family-cell .label {
+    font-family: 'Spline Sans Mono', monospace; font-size: 1.4rem;
+    letter-spacing: 0.12em; color: var(--ink); margin-bottom: 6px;
+  }
+  .family-cell .label .g { color: var(--A); }
+  .family-cell .label .b { color: var(--ink-faint); }
+  .family-cell .prob {
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.78rem;
+    color: var(--ink-faint);
+  }
+  .family-cell.kept { border-color: var(--B); background: rgba(108,176,212,0.10); }
+  .family-cell.both-girls.kept { border-color: var(--AB); background: rgba(95,184,122,0.16); }
+  .family-cell.knocked { opacity: 0.18; filter: grayscale(1); }
+  .family-controls { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0; justify-content: center; }
+  .family-controls button {
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.82rem;
+    background: var(--bg); border: 1px solid var(--line); color: var(--ink-soft);
+    padding: 9px 14px; border-radius: 7px; cursor: pointer; transition: all 0.2s;
+  }
+  .family-controls button:hover { border-color: var(--B); color: var(--ink); }
+  .family-controls button.active { background: var(--B); color: #0e1116; border-color: var(--B); font-weight: 600; }
+  .family-result {
+    text-align: center; margin-top: 16px; padding: 14px;
+    background: var(--bg); border-radius: 8px;
+    font-family: 'Spline Sans Mono', monospace; font-size: 1.02rem;
+    color: var(--ink-soft); min-height: 3em;
+  }
+  .family-result b { color: var(--AB); }
+  .family-result .num { color: var(--A); }
+
+  /* finale recap */
+  .finale { text-align: left; padding: 80px 0 60px; }
+  .recap { display: grid; gap: 14px; margin: 30px 0; }
+  .recap-item {
+    background: var(--bg-soft); border: 1px solid var(--line); border-radius: 10px;
+    padding: 16px 20px; display: flex; gap: 14px; align-items: flex-start;
+  }
+  .recap-item .num {
+    font-family: 'Spline Sans Mono', monospace; color: var(--B);
+    font-size: 0.85rem; font-weight: 600; flex-shrink: 0; padding-top: 2px;
+  }
+  .recap-item p { margin: 0; font-size: 0.96rem; color: var(--ink-soft); }
+  .recap-item b { color: var(--ink); }
+
+  .next-up {
+    background: rgba(108,176,212,0.06); border: 1px dashed var(--B);
+    border-radius: 10px; padding: 18px 22px; margin: 30px 0 0;
+    font-size: 0.97rem; color: var(--ink-soft);
+  }
+  .next-up b { color: var(--B); }
+  .next-up .formula {
+    display: block; font-family: 'Spline Sans Mono', monospace;
+    color: var(--A); margin-top: 8px;
+  }
+
+  footer {
+    text-align: center; padding: 50px 0; border-top: 1px solid var(--line);
+    color: var(--ink-faint); font-size: 0.85rem;
+  }
+
+  code {
+    font-family: 'Spline Sans Mono', ui-monospace, monospace;
+    font-size: 0.92em;
+    color: var(--A);
+    background: rgba(201,162,39,0.08);
+    padding: 1px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+  code.b-tone { color: var(--B); background: rgba(108,176,212,0.08); }
+  code.ab-tone { color: var(--AB); background: rgba(95,184,122,0.08); }
+
+  .src-tag {
+    display: inline-block; font-family: 'Spline Sans Mono', monospace;
+    font-size: 0.68rem; color: var(--ink-faint); letter-spacing: 0.12em;
+    text-transform: uppercase; margin-left: 10px;
+    padding: 2px 8px; border: 1px solid var(--line); border-radius: 4px;
+  }
+
+  details {
+    background: var(--bg-soft); border: 1px solid var(--line); border-radius: 8px;
+    padding: 14px 18px; margin: 14px 0;
+  }
+  details summary {
+    cursor: pointer; font-family: 'Spline Sans Mono', monospace;
+    font-size: 0.85rem; color: var(--B); letter-spacing: 0.1em;
+    text-transform: uppercase; outline: none;
+  }
+  details[open] summary { margin-bottom: 12px; }
+  details p { margin: 8px 0; font-size: 0.97rem; }
+
+  .calc {
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.98rem;
+    background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+    padding: 16px 20px; margin: 18px 0; line-height: 1.85;
+    color: var(--ink-soft); overflow-x: auto;
+  }
+  .calc .step { color: var(--ink); }
+  .calc .gold { color: var(--A); }
+  .calc .blue { color: var(--B); }
+  .calc .green { color: var(--AB); }
+
+  .interp-table {
+    width: 100%; border-collapse: collapse; margin: 18px 0;
+    font-size: 0.96rem;
+  }
+  .interp-table th, .interp-table td {
+    padding: 12px 14px; text-align: left;
+    border-bottom: 1px solid var(--line);
+  }
+  .interp-table th {
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.78rem;
+    letter-spacing: 0.12em; color: var(--ink-faint);
+    text-transform: uppercase; font-weight: 500;
+  }
+  .interp-table td { color: var(--ink-soft); }
+  .interp-table td.feature { color: var(--B); font-family: 'Spline Sans Mono', monospace; font-size: 0.88rem; }
+  .interp-table td.result { color: var(--AB); font-family: 'Spline Sans Mono', monospace; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div id="rail"><div id="rail-fill"></div></div>
+<nav id="dots"></nav>
+
+<div class="wrap">
+
+  <!-- ============ HERO ============ -->
+  <header>
+    <div class="eyebrow">Chapter 2 · §2.2</div>
+    <h1>Definition and intuition
+      <span class="zh">把上一節的直覺,正式寫成一條公式 — 並用兩種方式「看」它</span>
+    </h1>
+    <div class="hero-quote">
+      The conditional probability of A given B is defined as P(A ∩ B) / P(B).
+      <span class="src">— Definition 2.2.1, p.46</span>
+    </div>
+    <div class="scroll-hint"><span class="arrow">↓</span> 一個定義、兩個直覺、四個例子</div>
+  </header>
+
+  <!-- ============ STAGE 1: Definition ============ -->
+  <section class="stage" id="s1">
+    <div class="stage-tag">錨點 1 · 正式定義</div>
+    <h2>The definition<span class="src-tag">p.46 · Definition 2.2.1</span></h2>
+
+    <p>§2.1 給的是直覺:條件機率是「看到證據後,信念該如何更新」。本節第一件事,就是把這個直覺<strong>釘成一條精確的公式</strong>。</p>
+
+    <div class="bookq def">
+      <b>Definition 2.2.1 (Conditional probability).</b> If A and B are events with P(B) &gt; 0, then the conditional probability of A given B, denoted by P(A|B), is defined as
+      <span class="src">— §2.2 p.46</span>
+    </div>
+
+    <div class="formula-hero">
+      <span class="lhs">P(A<span class="bar">|</span>B)</span>
+      <span class="eq">=</span>
+      <span class="frac">
+        <span class="rhs-top">P(A ∩ B)</span>
+        <span class="rhs-bot">P(B)</span>
+      </span>
+    </div>
+
+    <p>看起來再簡單不過 — 兩個機率的比值。但這條看似平凡的公式,後面整整一章的 <em>Bayes' rule</em>、<em>law of total probability</em>、<em>conditional independence</em> 全都從它長出來。</p>
+
+    <p>書中還特別強調了名詞:</p>
+
+    <ul style="list-style:none; padding-left:0; margin: 18px 0;">
+      <li style="margin-bottom: 10px; padding-left: 18px; border-left: 2px solid var(--A);">
+        <code>A</code> = <strong>the event whose uncertainty we want to update</strong> — 我們不確定、想知道的事件
+      </li>
+      <li style="margin-bottom: 10px; padding-left: 18px; border-left: 2px solid var(--B);">
+        <code class="b-tone">B</code> = <strong>the evidence we observe</strong> — 我們已觀察到、或要當成「給定」的證據
+      </li>
+      <li style="margin-bottom: 10px; padding-left: 18px; border-left: 2px solid var(--ink-faint);">
+        <code>P(A)</code> = <em>prior probability</em>(更新<strong>前</strong>的機率)
+      </li>
+      <li style="padding-left: 18px; border-left: 2px solid var(--ink-faint);">
+        <code class="b-tone">P(A|B)</code> = <em>posterior probability</em>(更新<strong>後</strong>的機率)
+      </li>
+    </ul>
+
+    <h3>一個極容易誤讀的小陷阱</h3>
+
+    <p>初學者(也包含一些教科書)很容易把直立條紋讀成「事件 <code>A|B</code>」 — 好像存在一個叫做「A given B」的事件。但書裡明白地否定這件事:</p>
+
+    <div class="bookq">
+      It is important to interpret the event appearing after the vertical conditioning bar as the evidence that we have observed or that is being conditioned on: P(A|B) is the probability of A given the evidence B, <b>not the probability of some entity called A|B</b>. There is no such event as A|B.
+      <span class="src">— §2.2 p.46 (forward ref to §2.4.1)</span>
+    </div>
+
+    <p>那一根 <code class="b-tone">|</code> 不是事件運算子,而是一個「閱讀提示」:右邊那個東西,當成<strong>已知</strong>來讀。</p>
+
+    <h3>一個必要的健全性檢查</h3>
+
+    <p>書中接著用定義跑了一個很短的計算,作為這條定義「合理」的最基本檢驗:</p>
+
+    <div class="calc">
+      <span class="gold">P(A | A)</span> = <span class="green">P(A ∩ A)</span> / <span class="blue">P(A)</span> = <span class="gold">P(A)</span> / <span class="blue">P(A)</span> = <span class="step">1</span>
+    </div>
+
+    <p>白話:<em>已經知道 A 發生了之後,A 發生的機率是 1。</em>書中說得很乾脆 — 如果這條等式不成立,「we would demand a new definition of conditional probability」。換句話說,這是條件機率定義必須通過的最低門檻。它通過了。</p>
+
+    <div class="q reflect" data-q="why-ratio">
+      <div class="q-label">先想一下,再往下捲</div>
+      <div class="q-text">為什麼分母會是 <code class="b-tone">P(B)</code>,而不是 <code>P(A)</code>、或乾脆不除?
+        <span class="small">不必有完整證明 — 用一兩句話講你目前的直覺。下一站(Pebble World 圖示)會把這個直覺視覺化。</span>
+      </div>
+      <textarea placeholder="寫下你目前的直覺⋯⋯(不會被儲存)"></textarea>
+      <button class="btn ghost" data-reveal>看一個簡短的鋪陳</button>
+      <div class="feedback" data-fb>
+        當我們<strong>已知 B 發生了</strong>,所有不在 B 裡的可能性都該被「丟掉」 — 它們已被證據排除。剩下的世界是 B,所以新的「總機率質量」是 <code class="b-tone">P(B)</code> 而不是 1。
+        要讓剩下的機率重新加總成 1,我們把所有 mass 都 <b>除以 P(B)</b> — 這就是「除以分母」的意思。下一站的 Pebble World 會把這個動作畫出來。
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STAGE 2: Two cards ============ -->
+  <section class="stage" id="s2">
+    <div class="stage-tag">錨點 2 · 第一個算例</div>
+    <h2>Example 2.2.2 — 兩張牌<span class="src-tag">p.46–47</span></h2>
+
+    <div class="bookq">
+      A standard deck of cards is shuffled well. Two cards are drawn randomly, one at a time without replacement. Let <b>A</b> be the event that the first card is a heart, and <b>B</b> be the event that the second card is red. Find P(A|B) and P(B|A).
+      <span class="src">— Example 2.2.2 p.46</span>
+    </div>
+
+    <p>這是書中第一個「真的把定義代進去算」的例子。要把定義跑通,我們需要三件東西:<code class="ab-tone">P(A∩B)</code>、<code>P(A)</code>、<code class="b-tone">P(B)</code>。</p>
+
+    <div class="q" data-q="card-which-bigger">
+      <div class="q-label">先靠直覺猜</div>
+      <div class="q-text">不算數字 — 你覺得 <code>P(A|B)</code> 跟 <code class="b-tone">P(B|A)</code> 哪個大?
+        <span class="small">A = 第一張是 ♥(heart);B = 第二張是紅色。</span>
+      </div>
+      <div class="opts">
+        <button class="opt" data-correct="false">P(A|B) 比較大</button>
+        <button class="opt" data-correct="true">P(B|A) 比較大</button>
+        <button class="opt" data-correct="false">兩個一樣大(根據對稱性)</button>
+      </div>
+      <div class="feedback" data-fb>
+        <strong>P(B|A) 比較大。</strong> 給定「第一張是 heart」,牌堆只剩 51 張,其中紅色還有 25 張 → <code class="b-tone">P(B|A) = 25/51 ≈ 0.49</code>,差不多一半。
+        反過來,給定「第二張是紅色」,「第一張是 heart」這件事的機率,大致是從先驗的 1/4 微調 — 等等會算出來是 <code>P(A|B) = 25/102 ≈ 0.245</code>。
+        這個不對稱,正是書中接下來三點觀察的第一點。
+      </div>
+    </div>
+
+    <h3>把三塊拼圖算出來</h3>
+
+    <p>書中用 naive 定義加上 multiplication rule:</p>
+
+    <div class="calc">
+      <span class="green">P(A ∩ B)</span> = 13 · 25 / (52 · 51) = <span class="green">25/204</span>
+      <br><span style="color:var(--ink-faint)">  ↑ 第一張選 13 張 heart 之一,接著第二張從剩下 51 張中選 25 張紅(剩下的紅色)</span>
+      <br><br>
+      <span class="gold">P(A)</span> = <span class="gold">1/4</span>
+      <span style="color:var(--ink-faint)">  ← 四種花色等可能</span>
+      <br><br>
+      <span class="blue">P(B)</span> = 26 · 51 / (52 · 51) = <span class="blue">1/2</span>
+    </div>
+
+    <p>那個 <code class="b-tone">P(B) = 1/2</code> 的計算稍微繞 — 書緊接著給了一個更乾淨的論證:</p>
+
+    <div class="bookq">
+      A neater way to see that P(B) = 1/2 is by <b>symmetry</b>: from a vantage point before having done the experiment, the second card is equally likely to be any card in the deck.
+      <span class="src">— §2.2 p.47</span>
+    </div>
+
+    <p>關鍵是「<em>before having done the experiment</em>」 — 還沒抽之前,任何特定位置的牌「就是」這 52 張之一,所以是紅的機率就是 26/52 = 1/2。</p>
+
+    <h3>套定義</h3>
+
+    <div class="calc">
+      <span class="step">P(A | B)</span> = <span class="green">P(A∩B)</span> / <span class="blue">P(B)</span> = (25/204) / (1/2) = <span class="step">25/102</span>
+      <br>
+      <span class="step">P(B | A)</span> = <span class="green">P(A∩B)</span> / <span class="gold">P(A)</span> = (25/204) / (1/4) = <span class="step">25/51</span>
+    </div>
+
+    <p>注意:分子是同一個 <code class="ab-tone">P(A∩B) = 25/204</code>,只是分母不同 — 一個除以證據的機率、一個除以被更新事件的機率。這是書中刻意要讓你看到的對比。</p>
+
+    <h3>書接著列了三點觀察(都重要)</h3>
+
+    <details>
+      <summary>觀察 1:P(A|B) ≠ P(B|A)</summary>
+      <p>必須非常小心哪個事件放在條紋哪一側。書中說:</p>
+      <div class="bookq" style="margin: 6px 0;">
+        Confusing these two quantities is called the <b>prosecutor's fallacy</b> and is discussed in §2.8.
+        <span class="src">— §2.2 p.47, observation 1</span>
+      </div>
+      <p>(若把 B 改成「第二張是 heart」 — 也就是兩件事是同樣描述 — 那它們才會相等。)</p>
+    </details>
+
+    <details>
+      <summary>觀察 2:時序不決定能算什麼</summary>
+      <p>「第一張」、「第二張」聽起來像時間順序,但條件機率<em>不在乎</em>誰先誰後 — 它只在乎「給定一件事的資訊,另一件事的機率是多少」。書中寫得很有畫面:</p>
+      <div class="bookq" style="margin: 6px 0;">
+        Imagine that someone spreads out the cards and draws one card with their <b>left hand</b> and another with their <b>right hand</b>, at the same time. Defining A and B based on the left hand's card and the right hand's card rather than the first card and second card would not change the structure of the problem.
+        <span class="src">— §2.2 p.47, observation 2</span>
+      </div>
+      <p>條件機率講的是「資訊間的關聯」,不是「誰造成誰」。</p>
+    </details>
+
+    <details>
+      <summary>觀察 3:P(B|A) 容易直觀理解,P(A|B) 不容易</summary>
+      <p><code class="b-tone">P(B|A) = 25/51</code> 可以直接想:給定第一張是 heart,剩下 51 張中有 25 張紅 — 機率就是 25/51。</p>
+      <p>但 <code>P(A|B) = 25/102</code> 沒有那麼乾淨的直接詮釋。書中說:</p>
+      <div class="bookq" style="margin: 6px 0;">
+        If we learn that the second card is red, we might think "that's nice to know, but what we really want to know is whether <b>it's a heart</b>!"
+        <span class="src">— §2.2 p.47, observation 3</span>
+      </div>
+      <p>正是這種「反向」的條件機率難算的情境,催生了後面的 Bayes' rule(§2.3)。</p>
+    </details>
+  </section>
+
+  <!-- ============ STAGE 3: Two intuitions (Pebble World + Frequentist) ============ -->
+  <section class="stage" id="s3">
+    <div class="stage-tag">錨點 3 + 4 · 兩種看待這條定義的方式</div>
+    <h2>兩種直覺解讀<span class="src-tag">p.47–49 · Intuition 2.2.3 &amp; 2.2.4</span></h2>
+
+    <p>定義是一條公式。但要真的<em>感覺到</em>條件機率是什麼,書中提供了<strong>兩種</strong>互補的直覺。它們講的是同一件事,只是看的角度不同。</p>
+
+    <h3>Intuition 2.2.3 — Pebble World(石子世界)</h3>
+
+    <div class="bookq">
+      Consider a finite sample space, with the outcomes visualized as <b>pebbles with total mass 1</b>. Since A is an event, it is a set of pebbles, and likewise for B.
+      <span class="src">— Intuition 2.2.3, p.47–48</span>
+    </div>
+
+    <p>把每個 outcome 想成一顆石子,所有石子的「質量」加起來是 1。事件 A 是某些石子的集合,事件 B 也是。書中 Figure 2.1 把<strong>三個步驟</strong>畫出來 — 我用 SVG 重現一下:</p>
+
+    <div class="pebble-stage">
+      <svg viewBox="0 0 480 280" id="pebble-svg" aria-label="Pebble World 三步驟視覺化">
+        <!-- sample space border -->
+        <rect x="10" y="10" width="460" height="260" rx="14" fill="none" stroke="#2a323d" stroke-width="1.5" stroke-dasharray="4 6"/>
+        <text x="22" y="32" font-family="'Spline Sans Mono', monospace" font-size="11" fill="#6b7480" letter-spacing="0.1em">SAMPLE SPACE</text>
+
+        <!-- A circle -->
+        <circle id="A-circ" cx="180" cy="155" r="92" fill="rgba(201,162,39,0.10)" stroke="#c9a227" stroke-width="2"/>
+        <text x="120" y="80" font-family="Newsreader, serif" font-size="20" fill="#c9a227" font-style="italic">A</text>
+
+        <!-- B circle -->
+        <circle id="B-circ" cx="290" cy="170" r="88" fill="rgba(108,176,212,0.10)" stroke="#6cb0d4" stroke-width="2"/>
+        <text x="345" y="90" font-family="Newsreader, serif" font-size="20" fill="#6cb0d4" font-style="italic">B</text>
+
+        <!-- pebbles -->
+        <!-- A only -->
+        <g class="peb" data-zone="Aonly"><circle cx="135" cy="130" r="8" fill="#c9a227"/></g>
+        <g class="peb" data-zone="Aonly"><circle cx="150" cy="175" r="10" fill="#c9a227"/></g>
+        <g class="peb" data-zone="Aonly"><circle cx="115" cy="170" r="7" fill="#c9a227"/></g>
+        <g class="peb" data-zone="Aonly"><circle cx="170" cy="105" r="9" fill="#c9a227"/></g>
+        <!-- A ∩ B -->
+        <g class="peb" data-zone="AB"><circle cx="225" cy="155" r="10" fill="#5fb87a"/></g>
+        <g class="peb" data-zone="AB"><circle cx="245" cy="185" r="9" fill="#5fb87a"/></g>
+        <g class="peb" data-zone="AB"><circle cx="220" cy="195" r="7" fill="#5fb87a"/></g>
+        <!-- B only -->
+        <g class="peb" data-zone="Bonly"><circle cx="305" cy="140" r="8" fill="#6cb0d4"/></g>
+        <g class="peb" data-zone="Bonly"><circle cx="340" cy="170" r="11" fill="#6cb0d4"/></g>
+        <g class="peb" data-zone="Bonly"><circle cx="295" cy="210" r="9" fill="#6cb0d4"/></g>
+        <g class="peb" data-zone="Bonly"><circle cx="325" cy="215" r="7" fill="#6cb0d4"/></g>
+        <!-- outside -->
+        <g class="peb" data-zone="out"><circle cx="65" cy="55" r="7" fill="#6b7480"/></g>
+        <g class="peb" data-zone="out"><circle cx="420" cy="50" r="8" fill="#6b7480"/></g>
+        <g class="peb" data-zone="out"><circle cx="60" cy="240" r="9" fill="#6b7480"/></g>
+        <g class="peb" data-zone="out"><circle cx="420" cy="245" r="7" fill="#6b7480"/></g>
+      </svg>
+      <div class="pebble-controls" id="pebble-controls">
+        <button data-step="0" class="active">(a) 起始</button>
+        <button data-step="1">(b) 知道 B 發生</button>
+        <button data-step="2">(c) 重新標準化</button>
+      </div>
+      <div class="pebble-caption" id="pebble-caption">
+        每顆石子是一個 outcome。<span class="gold">A</span> 圈內、<span class="green">A∩B</span> 交集、<span style="color:var(--B);font-weight:600">B</span> 圈內、和外面的石子,總質量為 1。
+      </div>
+    </div>
+
+    <p>三步驟對應書中 Figure 2.1 的 (a) (b) (c):先看初始的石子分佈;一旦知道 <code class="b-tone">B</code> 發生,把 <code class="b-tone">B^c</code> 的石子全部丟掉 — 它們與證據矛盾;最後把剩下的石子質量乘以一個常數,讓總質量仍為 1。這個常數就是 <code class="b-tone">1/P(B)</code>。<strong>剩餘 A 區域的質量,就是 <code>P(A|B)</code></strong>。</p>
+
+    <div class="bookq">
+      Outcomes that contradict the evidence are discarded, and their mass is redistributed among the remaining outcomes, <b>preserving the relative masses of the remaining outcomes</b>.
+      <span class="src">— §2.2 p.48</span>
+    </div>
+
+    <p>這句話的重點是 <em>preserving the relative masses</em>:如果原本石子 2 是石子 1 的兩倍重,那麼 conditioning 之後(只要兩顆都還在 B 裡)石子 2 仍然是石子 1 的兩倍重 — 它們各自乘以了同一個常數。</p>
+
+    <h3>Intuition 2.2.4 — Frequentist interpretation(頻率學派詮釋)</h3>
+
+    <div class="bookq">
+      Imagine repeating our experiment many times, generating a long list of observed outcomes. The conditional probability of A given B can then be thought of in a natural way: it is the <b>fraction of times that A occurs, restricting attention to the trials where B occurs</b>.
+      <span class="src">— Intuition 2.2.4, p.48</span>
+    </div>
+
+    <p>同樣一條公式,從另一個角度看:把實驗重複很多次,造一張長長的紀錄表;算 A 發生的比例,但<strong>只看 B 發生的那幾次</strong>。書中用 Figure 2.2 的方式畫出來 — 每一次實驗的結果是一串 0/1。設 <code class="b-tone">B</code> = 第一個位元是 1,<code>A</code> = 第二個位元是 1。</p>
+
+    <div class="freq-stage">
+      <div id="freq-rows">
+        <div class="freq-row" data-first="1" data-second="0"><span class="digit-first">1</span><span>0101010101001000010010</span><span class="tag">B 發生</span></div>
+        <div class="freq-row" data-first="0" data-second="1"><span class="digit-first">0</span><span>1010101001010000111110</span><span class="tag"></span></div>
+        <div class="freq-row" data-first="1" data-second="1"><span class="digit-first">1</span><span class="digit-second">1</span><span>110010101010000000111</span><span class="tag">A ∩ B</span></div>
+        <div class="freq-row" data-first="1" data-second="1"><span class="digit-first">1</span><span class="digit-second">1</span><span>001101101010101010110</span><span class="tag">A ∩ B</span></div>
+        <div class="freq-row" data-first="0" data-second="1"><span class="digit-first">0</span><span>1100001110101011110011</span><span class="tag"></span></div>
+        <div class="freq-row" data-first="1" data-second="0"><span class="digit-first">1</span><span>0100110111001001001110</span><span class="tag">B 發生</span></div>
+        <div style="text-align:center;color:var(--ink-faint);padding:4px 0">⋮</div>
+      </div>
+      <div class="pebble-controls" id="freq-controls" style="justify-content:center">
+        <button data-freq="0" class="active">(a) 一堆原始紀錄</button>
+        <button data-freq="1">(b) 圈出 B 發生的</button>
+        <button data-freq="2">(c) 看其中 A 也發生的</button>
+      </div>
+      <div class="freq-counter" id="freq-counter">
+        準備好就按按鈕,把過程跑一遍。
+      </div>
+    </div>
+
+    <p>用符號表示:在 n 次重複裡,設 n<sub>A</sub>, n<sub>B</sub>, n<sub>AB</sub> 分別是 A、B、A∩B 出現的次數。那麼</p>
+
+    <div class="calc">
+      <span class="step">P(A|B)</span> ≈ <span class="green">n<sub>AB</sub></span> / <span class="blue">n<sub>B</sub></span> = (<span class="green">n<sub>AB</sub></span>/n) / (<span class="blue">n<sub>B</sub></span>/n) → <span class="green">P(A∩B)</span> / <span class="blue">P(B)</span>
+    </div>
+
+    <p>從頻率角度看,定義裡的「除以 P(B)」就是「只看 B 發生的那幾次」。Pebble World 是<em>幾何</em>的詮釋,Frequentist 是<em>計數</em>的詮釋 — 同一條公式的兩個側影。</p>
+  </section>
+
+  <!-- ============ STAGE 4: Two children Gardner ============ -->
+  <section class="stage" id="s4">
+    <div class="stage-tag">錨點 5 · 一個經典的腦筋急轉彎</div>
+    <h2>Example 2.2.5 — Martin Gardner 的兩個小孩<span class="src-tag">p.49–50</span></h2>
+
+    <p>書中接下來連續三個例子(2.2.5 / 2.2.6 / 2.2.7)都圍繞「一個家庭有兩個小孩」這個情境。三題答案不同,差別<strong>不在數學,而在條件本身怎麼描述</strong>。這是這節最費神、也最有教益的部分。</p>
+
+    <div class="bookq">
+      <b>Mr. Jones</b> has two children. The older child is a girl. What is the probability that both children are girls?
+      <br><br>
+      <b>Mr. Smith</b> has two children. At least one of them is a boy. What is the probability that both children are boys?
+      <span class="src">— Martin Gardner, Scientific American, 1950s; quoted in §2.2 p.49</span>
+    </div>
+
+    <p>Gardner 給的答案是 <strong>1/2</strong> 和 <strong>1/3</strong>。直覺上很多人會覺得「兩題不是一樣嗎?」事實上不一樣。為了方便對比,書中把第二題改寫成 girl 版本(「至少有一個女孩」),這樣兩題都在問「兩個都是女孩的條件機率」。</p>
+
+    <p>先把書中明示的<strong>三個假設</strong>列出來(都有問題,但是計算這題的前提):</p>
+
+    <ul style="list-style:none; padding-left:0; margin: 14px 0;">
+      <li style="margin-bottom: 8px; padding-left: 14px; border-left: 2px solid var(--ink-faint); font-size:0.96rem;color:var(--ink-soft)">假設 1:性別是二元的(書中也明白承認這簡化有問題)。</li>
+      <li style="margin-bottom: 8px; padding-left: 14px; border-left: 2px solid var(--ink-faint); font-size:0.96rem;color:var(--ink-soft)">假設 2:P(boy) = P(girl) = 1/2(實際略偏 boy)。</li>
+      <li style="padding-left: 14px; border-left: 2px solid var(--ink-faint); font-size:0.96rem;color:var(--ink-soft)">假設 3:兩個小孩的性別獨立(若是雙胞胎則不適用)。</li>
+    </ul>
+
+    <p>有了這些假設,樣本空間就是四個等可能 outcomes:<code>GG</code>(大女、小女)、<code>GB</code>(大女、小男)、<code>BG</code>、<code>BB</code> — 各為 1/4。試試兩個條件:</p>
+
+    <div class="family-grid" id="family-grid">
+      <div class="family-cell both-girls" data-id="GG"><div class="label"><span class="g">G</span><span class="g">G</span></div><div class="prob">1/4</div></div>
+      <div class="family-cell" data-id="GB"><div class="label"><span class="g">G</span><span class="b">B</span></div><div class="prob">1/4</div></div>
+      <div class="family-cell" data-id="BG"><div class="label"><span class="b">B</span><span class="g">G</span></div><div class="prob">1/4</div></div>
+      <div class="family-cell" data-id="BB"><div class="label"><span class="b">B</span><span class="b">B</span></div><div class="prob">1/4</div></div>
+    </div>
+    <div style="text-align:center;font-family:'Spline Sans Mono',monospace;font-size:0.78rem;color:var(--ink-faint);letter-spacing:0.1em;margin-top:-12px;margin-bottom:6px">左 = 老大,右 = 老二</div>
+
+    <div class="family-controls" id="family-controls">
+      <button data-cond="none" class="active">無條件</button>
+      <button data-cond="elder">老大是女孩(Mr. Jones)</button>
+      <button data-cond="atleast">至少一個女孩(Mr. Smith 改寫版)</button>
+    </div>
+    <div class="family-result" id="family-result">
+      無條件:四個 outcome 各為 1/4。其中只有 GG 是「兩個都是女孩」 → P(both girls) = <span class="num">1/4</span>。
+    </div>
+
+    <p style="margin-top: 26px">兩個條件帶來的差別,書中用一句話講得非常清楚:</p>
+
+    <div class="bookq">
+      Saying that the elder child is a girl <b>designates a specific child</b>, and then the other child has a 50% chance of being a girl. "At least one" does not refer to a specific child. Conditioning on a specific child being a girl knocks away 2 of the 4 "pebbles" in the sample space {GG, GB, BG, BB}; conditioning on at least one child being a girl knocks away only BB.
+      <span class="src">— §2.2 p.50</span>
+    </div>
+
+    <p>注意這裡書本身就用了 <em>pebble</em> 這個字 — 它是在<strong>呼應上一節 Intuition 2.2.3 的圖示</strong>。Gardner 的謎題,本質上就是「不同條件,knock 掉不同石子」的差異。</p>
+
+    <div class="q reflect" data-q="symmetry">
+      <div class="q-label">細讀一個對稱性</div>
+      <div class="q-text">書中明說:<code>P(both girls | younger is a girl)</code> 也等於 1/2(不只是老大那邊)。
+        既然「老大是女孩」和「老二是女孩」都給 1/2,為什麼把它們「或起來」變成「至少一個是女孩」反而給 1/3,而不是 1/2?
+        <span class="small">提示:「或起來」是不是真的等於「兩個條件機率的某種平均」?思考一下,再展開。</span>
+      </div>
+      <textarea placeholder="寫下你的思考⋯⋯(不會被儲存)"></textarea>
+      <button class="btn ghost" data-reveal>看書怎麼解</button>
+      <div class="feedback" data-fb>
+        <p style="margin:0 0 8px"><strong>關鍵:「至少一個是女孩」不指定哪一個</strong>。</p>
+        <p style="margin:0 0 8px">「老大是女孩」這個條件,knock 掉 {BG, BB} → 剩 {GG, GB},兩個 outcome 裡只有 GG 是兩女 → 1/2。</p>
+        <p style="margin:0 0 8px">「老二是女孩」這個條件,knock 掉 {GB, BB} → 剩 {GG, BG},也是 1/2。</p>
+        <p style="margin:0">但「至少一個是女孩」是這兩個的<b>聯集</b> — knock 掉的只有 BB,剩 {GG, GB, BG},三個 outcome 中只有 GG 是兩女 → 1/3。聯集條件比任一個單獨條件「弱」(留下了更多 pebble),所以分母變大、機率變小。對等於某個小孩的條件較強,knock 掉兩顆;「至少一個」較弱,只 knock 掉一顆 — 這就是差別。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STAGE 5: Random child ============ -->
+  <section class="stage" id="s5">
+    <div class="stage-tag">錨點 6 · 同一情境,換一種「遇到」方式</div>
+    <h2>Example 2.2.6 — 隨機遇到的那個小孩<span class="src-tag">p.50–51</span></h2>
+
+    <div class="bookq">
+      A family has two children. You <b>randomly run into one of the two</b>, and learn that she is a girl. With assumptions as in the previous example, what is the conditional probability that both are girls? Also assume that you are equally likely to run into either child, and that which one you run into has nothing to do with gender.
+      <span class="src">— Example 2.2.6 p.50</span>
+    </div>
+
+    <p>表面看起來這跟「至少一個是女孩」是同一件事 — 你不是「至少看到一個女孩」嗎?但書中給的答案是 <strong>1/2</strong>,跟 §2.2.5 的 1/3 不一樣。為什麼?</p>
+
+    <p>書中用形式定義走一遍。設 <code>G₁</code> = 老大是女孩,<code>G₂</code> = 老二是女孩,<code class="b-tone">G₃</code> = 隨機遇到的那個是女孩。假設給 P(G₁) = P(G₂) = P(G₃) = 1/2,且 P(G₁ ∩ G₂) = 1/4。</p>
+
+    <div class="calc">
+      <span class="step">P(G₁ ∩ G₂ | G₃)</span> = P(G₁ ∩ G₂ ∩ G₃) / <span class="blue">P(G₃)</span> = (1/4) / (1/2) = <span class="step">1/2</span>
+    </div>
+
+    <p>為什麼分子的 <code>P(G₁ ∩ G₂ ∩ G₃)</code> 等於 P(G₁ ∩ G₂) = 1/4?書中說得很乾脆:</p>
+
+    <div class="bookq">
+      G₁ ∩ G₂ ∩ G₃ = G₁ ∩ G₂, <b>if both children are girls, it guarantees that the random child is a girl</b>.
+      <span class="src">— §2.2 p.51</span>
+    </div>
+
+    <p>所以兩女時 G₃ 必然發生 — 第三個交集是多餘的。算下來 = 1/2,跟「老大是女孩 → 1/2」一致。</p>
+
+    <h3>關鍵警語:答案取決於「抽樣方式」</h3>
+
+    <p>差別不在數學,在於<em>你怎麼得到「至少一個女孩」這條資訊</em>。書中接著給了一個極為犀利的反例:</p>
+
+    <div class="bookq">
+      To take a simple extreme case, suppose that a repressive law forbids a boy from leaving the house if he has a sister. Then <b>"the random child is a girl"</b> is equivalent to "at least one of the children is a girl", so the problem reduces to the first part of Example 2.2.5.
+      <span class="src">— §2.2 p.51</span>
+    </div>
+
+    <p>同樣是「我遇到一個女孩」,在不同的抽樣機制下,意涵竟然不同 — 一個是「均勻隨機選擇」,另一個是「制度性地過濾」。前者給 1/2、後者給 1/3。</p>
+
+    <div class="mantra">
+      In statistics, it is essential to think carefully about <b>how the sample was collected</b>, not just stare at the raw data.
+      <span class="zh">「統計裡,要先想資料怎麼來,不要只盯著資料本身。」</span>
+    </div>
+
+    <p style="text-align:center;color:var(--ink-faint);font-size:0.9rem;margin-top:-8px"><span class="src-tag" style="margin:0">SOURCE §2.2 p.51</span></p>
+  </section>
+
+  <!-- ============ STAGE 6: Winter girl ============ -->
+  <section class="stage" id="s6">
+    <div class="stage-tag">錨點 7 · 看似不相關的資訊,卻會改變答案</div>
+    <h2>Example 2.2.7 — 冬天出生的女孩<span class="src-tag">p.51</span></h2>
+
+    <div class="bookq">
+      A family has two children. Find the probability that both children are girls, given that <b>at least one of the two is a girl who was born in winter</b>. Assume the four seasons are equally likely and that gender is independent of season.
+      <span class="src">— Example 2.2.7 p.51</span>
+    </div>
+
+    <p>感覺上很無辜的補充資訊(「冬天出生」)應該無關緊要 — 既然書已假設季節獨立於性別,知道一個女孩是冬天生的,憑什麼改變「兩個都是女孩」的條件機率?但書算出來的答案是 <strong>7/15</strong>,既不是 1/3、也不是 1/2,而是介於中間。</p>
+
+    <h3>計算</h3>
+
+    <p>單一小孩是「冬天出生的女孩」機率 = 1/2 × 1/4 = 1/8。所以</p>
+
+    <div class="calc">
+      <span class="blue">P(at least one winter girl)</span> = 1 − (7/8)² = <span class="blue">15/64</span>
+    </div>
+
+    <p>分子比較巧妙。「<em>兩個都是女孩,且至少一個冬天生的女孩</em>」其實等同於「兩個都是女孩,且至少一個冬天生的小孩」 — 因為在「兩個都是女孩」的前提下,任何冬天出生的小孩就是冬天出生的女孩。用季節與性別獨立:</p>
+
+    <div class="calc">
+      <span class="green">P(both girls, at least one winter girl)</span>
+      <br>  = P(both girls) · P(at least one winter child)
+      <br>  = (1/4) · (1 − (3/4)²) = (1/4)(7/16) = <span class="green">7/64</span>
+    </div>
+
+    <p>套定義:</p>
+
+    <div class="calc">
+      <span class="step">P(both girls | at least one winter girl)</span> = (7/64) / (15/64) = <span class="step">7/15</span> ≈ 0.467
+    </div>
+
+    <h3>為什麼會這樣?— 書中的解釋</h3>
+
+    <p>書中給出這節最重要的洞見之一:</p>
+
+    <div class="bookq">
+      The point is that information about the birth season <b>brings "at least one is a girl" closer to "a specific one is a girl"</b>. Conditioning on more and more specific information brings the probability closer and closer to 1/2.
+      <span class="src">— §2.2 p.51</span>
+    </div>
+
+    <p>連續三個例子(2.2.5 / 2.2.6 / 2.2.7)合起來,構成了一個漂亮的<strong>連續譜</strong> — 它們不是三個獨立題目,而是同一座光譜上的三個點:</p>
+
+    <table class="interp-table">
+      <thead>
+        <tr><th>給定的證據</th><th>「至少一個女孩」的<br>具體程度</th><th>P(兩個都是女孩 | 證據)</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>至少一個是女孩(無其他特徵)</td>
+          <td class="feature">最不具體</td>
+          <td class="result">1/3</td>
+        </tr>
+        <tr>
+          <td>至少一個是冬天生的女孩</td>
+          <td class="feature">介於中間</td>
+          <td class="result">7/15</td>
+        </tr>
+        <tr>
+          <td>至少一個是「3 月 31 日 8:20pm 生的女孩」</td>
+          <td class="feature">幾乎指定一個具體小孩</td>
+          <td class="result">≈ 1/2</td>
+        </tr>
+        <tr>
+          <td>明確指定:老大是女孩</td>
+          <td class="feature">完全指定具體小孩</td>
+          <td class="result">1/2</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>第三列(「3 月 31 日 8:20pm 生」)是書中直接舉的例子 — 一個如此罕見的特徵,幾乎等同於「指定一個具體小孩」,因此機率接近 1/2。換句話說:<em>越具體的特徵,越接近「指定一個」 — 而「指定一個小孩是女孩」與「另一個小孩是不是女孩」是獨立的,所以機率回到 1/2</em>。</p>
+
+    <div class="q reflect" data-q="winter-why">
+      <div class="q-label">綜合反思</div>
+      <div class="q-text">為什麼「季節與性別獨立」這個假設,沒辦法阻止「冬天」這個資訊改變答案?
+        <span class="small">提示:獨立性是說「知道季節 → 不改變性別機率」,但<strong>條件本身</strong>仍然是不同的條件。</span>
+      </div>
+      <textarea placeholder="寫下你的理解⋯⋯(不會被儲存)"></textarea>
+      <button class="btn ghost" data-reveal>展開一句收束</button>
+      <div class="feedback" data-fb>
+        季節與性別獨立 ≠ 「知道冬天 girl」 與「知道 girl」 是同一個條件。
+        前者排除了「夏天 girl」「秋天 girl」「春天 girl」的情境(雖然在這些情境裡也可能是兩女,但與條件不符);後者沒這個限制。
+        所以「at least one winter girl」是一個<strong>更窄、更具體</strong>的條件,它把「at least one girl」這個粗糙條件再切細一層。
+        切得越細,就越接近「指定一個具體小孩」,於是越接近 1/2。獨立性只是保證計算簡單(用 1/2 × 1/4),但不能讓「冬天」這個篩子變不見。
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FINALE ============ -->
+  <section class="stage finale" id="s7">
+    <div class="stage-tag">完成 · §2.2 走完了</div>
+    <h2>整節壓進一張紙</h2>
+
+    <div class="recap">
+      <div class="recap-item"><span class="num">D1</span><p><b>定義:</b> <code>P(A|B) = P(A∩B) / P(B)</code>(需 P(B) &gt; 0)。一根條紋不是事件運算子;A|B 不是事件。Sanity check:<code>P(A|A) = 1</code>。</p></div>
+      <div class="recap-item"><span class="num">E1</span><p><b>兩張牌:</b> P(A∩B) = 25/204,P(A) = 1/4,P(B) = 1/2(by symmetry)。 → P(A|B) = 25/102,P(B|A) = 25/51。一般而言 <code>P(A|B) ≠ P(B|A)</code> — 混淆它們稱為 <em>prosecutor's fallacy</em>。</p></div>
+      <div class="recap-item"><span class="num">I1</span><p><b>Pebble World 直覺:</b>把不在 B 的石子全丟掉、剩下的等比例放大讓總質量回到 1。<em>Relative masses</em> 保持不變。</p></div>
+      <div class="recap-item"><span class="num">I2</span><p><b>頻率學派直覺:</b><code>P(A|B) ≈ n<sub>AB</sub> / n<sub>B</sub></code> — 只看 B 發生那幾次,A 發生的比例。</p></div>
+      <div class="recap-item"><span class="num">E2</span><p><b>Gardner 兩小孩:</b>「老大是女孩 → 1/2」、「至少一個女孩 → 1/3」。差別在於 <em>specific child</em> 與「不指定誰」 — 兩種條件 knock 掉的 pebble 數量不同。</p></div>
+      <div class="recap-item"><span class="num">E3</span><p><b>隨機遇到一個小孩:</b> P(both girls | random child is a girl) = 1/2。同樣是「我看到一個女孩」,在不同的<em>抽樣機制</em>下答案可以是 1/2 或 1/3。<strong>How the sample was collected</strong> 至關重要。</p></div>
+      <div class="recap-item"><span class="num">E4</span><p><b>冬天的女孩:</b>條件機率 = 7/15,介於 1/3 與 1/2 之間。「越具體的特徵,越接近指定一個小孩 → 越接近 1/2」 — 這是整節最美的洞察之一。</p></div>
+    </div>
+
+    <div class="next-up">
+      <b>§2.2 給你的是「定義 + 兩種直覺 + 三個層次遞進的例子」。</b> 下一節 §2.3 <em>Bayes' rule and the law of total probability</em> 會從 P(A∩B) = P(A)P(B|A) = P(B)P(A|B) 這個極短的恆等式出發,推出整章兩大主定理:
+      <span class="formula">P(A|B) = P(B|A) P(A) / P(B)   ← Bayes' rule</span>
+      <span class="formula">P(B) = Σᵢ P(B|Aᵢ) P(Aᵢ)         ← Law of total probability</span>
+    </div>
+
+    <div class="mantra" style="margin-top:40px">
+      Conditioning on more and more specific information<br>
+      <b>brings the probability closer and closer to 1/2.</b>
+      <span class="zh">「條件越具體,機率越靠近 1/2。」  — §2.2 結語</span>
+    </div>
+  </section>
+
+  <footer>
+    Blitzstein &amp; Hwang, <em>Introduction to Probability</em> · §2.2 Definition and intuition · 互動式閱讀版
+  </footer>
+
+</div>
+
+<script>
+/* ---------- progress + nav dots + reveal-on-scroll ---------- */
+const stages = [...document.querySelectorAll('.stage')];
+const railFill = document.getElementById('rail-fill');
+const dotsNav = document.getElementById('dots');
+
+stages.forEach((st, i) => {
+  const b = document.createElement('button');
+  b.title = '第 ' + (i+1) + ' 段';
+  b.onclick = () => st.scrollIntoView({behavior:'smooth', block:'start'});
+  dotsNav.appendChild(b);
+});
+const dotBtns = [...dotsNav.children];
+
+const io = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('visible');
+      const nb = e.target.querySelector('.notation');
+      if (nb) nb.classList.add('visible');
+    }
+  });
+}, { threshold: 0.12 });
+stages.forEach(s => io.observe(s));
+
+function onScroll() {
+  const h = document.documentElement;
+  const pct = h.scrollTop / (h.scrollHeight - h.clientHeight) * 100;
+  railFill.style.width = pct + '%';
+  let active = 0;
+  stages.forEach((s, i) => {
+    const r = s.getBoundingClientRect();
+    if (r.top < window.innerHeight * 0.5) active = i;
+  });
+  dotBtns.forEach((d, i) => {
+    d.classList.toggle('active', i === active);
+    d.classList.toggle('done', i < active);
+  });
+}
+window.addEventListener('scroll', onScroll); onScroll();
+
+/* ---------- multi-choice ---------- */
+document.querySelectorAll('.q[data-q] .opts').forEach(opts => {
+  const card = opts.closest('.q');
+  const fb = card.querySelector('[data-fb]');
+  opts.querySelectorAll('.opt').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (opts.dataset.locked) return;
+      opts.dataset.locked = '1';
+      const correct = btn.getAttribute('data-correct') === 'true';
+      opts.querySelectorAll('.opt').forEach(o => {
+        o.classList.add('locked');
+        if (o.getAttribute('data-correct') === 'true') {
+          o.classList.add('correct');
+          o.insertAdjacentHTML('beforeend', '<span class="mark" style="color:var(--good)">✓</span>');
+        }
+      });
+      if (!correct) {
+        btn.classList.add('wrong');
+        btn.insertAdjacentHTML('beforeend', '<span class="mark" style="color:var(--bad)">✕</span>');
+      }
+      fb && fb.classList.add('show');
+    });
+  });
+});
+
+/* ---------- reflection reveal ---------- */
+document.querySelectorAll('[data-reveal]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const fb = btn.closest('.q').querySelector('[data-fb]');
+    fb.classList.add('show');
+    btn.disabled = true;
+    btn.textContent = '已展開 ✓';
+  });
+});
+
+/* ---------- Pebble World steps ---------- */
+const pebSvg = document.getElementById('pebble-svg');
+const pebCaption = document.getElementById('pebble-caption');
+const pebControls = document.getElementById('pebble-controls');
+const pebbles = [...pebSvg.querySelectorAll('.peb')];
+const aCirc = document.getElementById('A-circ');
+const bCirc = document.getElementById('B-circ');
+
+const pebCaptions = [
+  '每顆石子是一個 outcome。<span class="gold">A</span> 圈內、<span class="green">A∩B</span> 交集、<span style="color:var(--B);font-weight:600">B</span> 圈內、和外面的石子,總質量為 1。',
+  '<b>知道 B 發生了</b> — 把所有不在 B 裡的石子丟掉(A only 與外部變灰)。剩下的總質量是 <b>P(B)</b>,小於 1。',
+  '<b>Renormalize</b> — 剩下的石子各自乘以 1/P(B),讓總質量回到 1。<span class="green">A∩B</span> 區域的質量,就是 <b>P(A|B)</b>。'
+];
+
+function setPebStep(step) {
+  pebbles.forEach(p => {
+    const zone = p.dataset.zone;
+    p.style.transition = 'opacity 0.5s, transform 0.5s';
+    if (step === 0) {
+      p.style.opacity = 1;
+      p.style.transform = '';
+    } else if (step === 1) {
+      if (zone === 'AB' || zone === 'Bonly') {
+        p.style.opacity = 1;
+        p.style.transform = '';
+      } else {
+        p.style.opacity = 0.12;
+        p.style.transform = '';
+      }
+    } else if (step === 2) {
+      if (zone === 'AB' || zone === 'Bonly') {
+        p.style.opacity = 1;
+        const c = p.querySelector('circle');
+        p.style.transformOrigin = (c.getAttribute('cx')) + 'px ' + (c.getAttribute('cy')) + 'px';
+        p.style.transform = 'scale(1.45)';
+      } else {
+        p.style.opacity = 0.06;
+        p.style.transform = '';
+      }
+    }
+  });
+  aCirc.style.transition = 'all 0.5s';
+  bCirc.style.transition = 'all 0.5s';
+  if (step === 2) {
+    aCirc.style.opacity = 0.4;
+    bCirc.style.strokeWidth = 3;
+    bCirc.style.fill = 'rgba(108,176,212,0.18)';
+  } else {
+    aCirc.style.opacity = 1;
+    bCirc.style.strokeWidth = 2;
+    bCirc.style.fill = 'rgba(108,176,212,0.10)';
+  }
+  pebCaption.innerHTML = pebCaptions[step];
+  pebControls.querySelectorAll('button').forEach(b => {
+    b.classList.toggle('active', +b.dataset.step === step);
+  });
+}
+pebControls.querySelectorAll('button').forEach(b => {
+  b.addEventListener('click', () => setPebStep(+b.dataset.step));
+});
+
+/* ---------- Frequentist 0/1 visualization ---------- */
+const freqRows = [...document.querySelectorAll('#freq-rows .freq-row')];
+const freqControls = document.getElementById('freq-controls');
+const freqCounter = document.getElementById('freq-counter');
+
+const freqCaptions = [
+  '原始紀錄。每一列是一次實驗的結果,共 6 列(以 ⋮ 代表還有更多)。',
+  '把第一位是 1(<span style="color:var(--B);font-weight:600">B 發生</span>)的列圈起來 — 共 4 列。',
+  '在這 4 列中,看第二位也是 1(<span style="color:var(--AB);font-weight:600">A∩B</span>)的有幾列 — 共 2 列。所以 <code>P(A|B) ≈ 2/4 = 1/2</code>。'
+];
+
+function setFreqStep(step) {
+  freqRows.forEach(r => {
+    r.classList.remove('in-B', 'in-AB');
+    if (step >= 1 && r.dataset.first === '1') r.classList.add('in-B');
+    if (step >= 2 && r.dataset.first === '1' && r.dataset.second === '1') r.classList.add('in-AB');
+  });
+  const nB = freqRows.filter(r => r.dataset.first === '1').length;
+  const nAB = freqRows.filter(r => r.dataset.first === '1' && r.dataset.second === '1').length;
+  if (step === 0) {
+    freqCounter.innerHTML = freqCaptions[0];
+  } else if (step === 1) {
+    freqCounter.innerHTML = freqCaptions[1] + '<br><span style="color:var(--ink-faint)">當前可見:</span> <span class="nB">n_B = ' + nB + '</span>';
+  } else {
+    freqCounter.innerHTML = freqCaptions[2] + '<br><span class="nAB">n_AB = ' + nAB + '</span> &nbsp; / &nbsp; <span class="nB">n_B = ' + nB + '</span> &nbsp;→&nbsp; <span class="ans">P(A|B) ≈ ' + nAB + '/' + nB + ' = ' + (nAB/nB).toFixed(2) + '</span>';
+  }
+  freqControls.querySelectorAll('button').forEach(b => {
+    b.classList.toggle('active', +b.dataset.freq === step);
+  });
+}
+freqControls.querySelectorAll('button').forEach(b => {
+  b.addEventListener('click', () => setFreqStep(+b.dataset.freq));
+});
+setFreqStep(0);
+
+/* ---------- Two children family grid ---------- */
+const familyCells = [...document.querySelectorAll('#family-grid .family-cell')];
+const familyResult = document.getElementById('family-result');
+const familyControls = document.getElementById('family-controls');
+
+const familyData = {
+  GG: { elder: 'G', younger: 'G' },
+  GB: { elder: 'G', younger: 'B' },
+  BG: { elder: 'B', younger: 'G' },
+  BB: { elder: 'B', younger: 'B' }
+};
+
+function setFamilyCond(cond) {
+  const kept = [];
+  familyCells.forEach(c => {
+    c.classList.remove('kept', 'knocked');
+    const id = c.dataset.id;
+    const d = familyData[id];
+    let keep = false;
+    if (cond === 'none') keep = true;
+    else if (cond === 'elder') keep = (d.elder === 'G');
+    else if (cond === 'atleast') keep = (d.elder === 'G' || d.younger === 'G');
+    if (keep) { c.classList.add('kept'); kept.push(id); }
+    else c.classList.add('knocked');
+  });
+
+  const bothGirls = kept.filter(id => id === 'GG').length;
+  const denom = kept.length;
+
+  if (cond === 'none') {
+    familyResult.innerHTML = '無條件:四個 outcome 各為 1/4。其中只有 GG 是「兩個都是女孩」 → P(both girls) = <span class="num">1/4</span>。';
+  } else if (cond === 'elder') {
+    familyResult.innerHTML = '條件:<b style="color:var(--B)">老大是女孩</b> → 留下 {GG, GB} = 2 個 outcome。其中 GG 是兩女 → <b>P(both girls | elder is a girl) = 1/2</b>';
+  } else if (cond === 'atleast') {
+    familyResult.innerHTML = '條件:<b style="color:var(--B)">至少一個女孩</b> → 留下 {GG, GB, BG} = 3 個 outcome。其中 GG 是兩女 → <b>P(both girls | at least one girl) = 1/3</b>';
+  }
+
+  familyControls.querySelectorAll('button').forEach(b => {
+    b.classList.toggle('active', b.dataset.cond === cond);
+  });
+}
+familyControls.querySelectorAll('button').forEach(b => {
+  b.addEventListener('click', () => setFamilyCond(b.dataset.cond));
+});
+setFamilyCond('none');
+</script>
+</body>
+</html>
