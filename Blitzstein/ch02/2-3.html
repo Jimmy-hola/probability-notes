@@ -1,0 +1,1439 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2.3 Bayes' rule and the law of total probability · Blitzstein & Hwang</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Spline+Sans+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+
+  :root {
+    --bg: #0e1116;
+    --bg-soft: #161b22;
+    --panel: #1c232e;
+    --ink: #e8e2d4;
+    --ink-soft: #a9b1bd;
+    --ink-faint: #6b7480;
+    --line: #2a323d;
+    --A: #c9a227;        /* 金 — P(A)、posterior P(A|B):我們在更新信念的那個事件 */
+    --A-soft: #5a4810;
+    --B: #6cb0d4;        /* 藍 — P(B)、likelihood P(B|A):觀察到的證據 */
+    --B-soft: #20445b;
+    --AB: #5fb87a;       /* 綠 — P(A ∩ B):兩者同時 */
+    --AB-soft: #1f4a2a;
+    --post: #d4663a;     /* 橘 — 結果 / posterior 結論色 */
+    --good: #5fb87a;
+    --bad: #d65f6e;
+    --accent: #6cb0d4;
+    /* LOTP partition palette */
+    --p1: #c9a227; --p2: #6cb0d4; --p3: #5fb87a; --p4: #d4663a; --p5: #a481c2; --p6: #d4a06c;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(108,176,212,0.08), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 90% 10%, rgba(201,162,39,0.05), transparent 50%),
+      radial-gradient(ellipse 50% 35% at 10% 60%, rgba(212,102,58,0.04), transparent 50%),
+      var(--bg);
+    color: var(--ink);
+    font-family: 'Noto Sans TC', sans-serif;
+    line-height: 1.78;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 9999; mix-blend-mode: overlay;
+  }
+
+  .wrap { max-width: 720px; margin: 0 auto; padding: 0 24px; }
+
+  /* progress rail + dots */
+  #rail { position: fixed; top: 0; left: 0; right: 0; height: 3px; background: var(--line); z-index: 100; }
+  #rail-fill { height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--A), var(--B), var(--post)); transition: width 0.4s ease; }
+  #dots { position: fixed; right: 22px; top: 50%; transform: translateY(-50%);
+    display: flex; flex-direction: column; gap: 13px; z-index: 100; }
+  #dots button { width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid var(--ink-faint);
+    background: transparent; cursor: pointer; padding: 0; transition: all 0.25s; }
+  #dots button.active { background: var(--B); border-color: var(--B); transform: scale(1.35); }
+  #dots button.done { background: var(--A); border-color: var(--A); }
+  @media (max-width: 720px) { #dots { display: none; } }
+
+  /* hero */
+  header {
+    min-height: 90vh; display: flex; flex-direction: column;
+    justify-content: center; padding: 60px 0;
+  }
+  .eyebrow {
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.78rem;
+    letter-spacing: 0.32em; text-transform: uppercase;
+    color: var(--B); margin-bottom: 22px;
+  }
+  h1 {
+    font-family: 'Newsreader', serif; font-weight: 500;
+    font-size: clamp(2.2rem, 6vw, 3.7rem); line-height: 1.08;
+    letter-spacing: -0.01em; margin-bottom: 14px;
+  }
+  h1 .zh {
+    display: block; font-family: 'Noto Sans TC'; font-weight: 500;
+    font-size: clamp(1.05rem, 2.4vw, 1.35rem); color: var(--ink-soft);
+    margin-top: 16px; letter-spacing: 0.02em;
+  }
+  .hero-quote {
+    font-family: 'Newsreader', serif; font-style: italic;
+    font-size: clamp(1.15rem, 2.6vw, 1.5rem); color: var(--ink);
+    max-width: 36ch; margin-top: 36px; line-height: 1.55;
+    border-left: 2px solid var(--B); padding-left: 22px;
+  }
+  .hero-quote .src {
+    display: block; font-style: normal; font-family: 'Spline Sans Mono', monospace;
+    font-size: 0.74rem; color: var(--ink-faint); letter-spacing: 0.15em;
+    margin-top: 14px; text-transform: uppercase;
+  }
+  .scroll-hint {
+    margin-top: 56px; font-family: 'Spline Sans Mono', monospace;
+    font-size: 0.8rem; color: var(--ink-faint); letter-spacing: 0.1em;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .scroll-hint .arrow { animation: bob 1.8s ease-in-out infinite; }
+  @keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(6px)} }
+
+  /* stages */
+  .stage {
+    padding: 70px 0 90px; border-top: 1px solid var(--line);
+    opacity: 0; transform: translateY(28px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+  .stage.visible { opacity: 1; transform: none; }
+  .stage-tag {
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.74rem;
+    letter-spacing: 0.28em; text-transform: uppercase;
+    color: var(--B); margin-bottom: 16px; display: flex; align-items: center; gap: 12px;
+  }
+  .stage-tag::before { content: ""; width: 30px; height: 1px; background: var(--B); }
+  h2 {
+    font-family: 'Newsreader', serif; font-weight: 500;
+    font-size: clamp(1.7rem, 4.2vw, 2.4rem); line-height: 1.2;
+    margin-bottom: 22px; letter-spacing: -0.01em;
+  }
+  h3 {
+    font-family: 'Newsreader', serif; font-weight: 500;
+    font-size: 1.3rem; line-height: 1.3; margin: 36px 0 14px;
+    color: var(--ink);
+  }
+  p { margin-bottom: 18px; color: var(--ink-soft); font-size: 1.04rem; }
+  p strong { color: var(--ink); font-weight: 500; }
+  p em { color: var(--A); font-style: normal; }
+  .lead { color: var(--ink); font-size: 1.1rem; }
+
+  /* book quote */
+  .bookq {
+    border-left: 2px solid var(--A);
+    background: rgba(201,162,39,0.04);
+    padding: 18px 22px; margin: 24px 0;
+    font-family: 'Newsreader', serif; font-size: 1.07rem; line-height: 1.65;
+    color: var(--ink); border-radius: 0 6px 6px 0;
+  }
+  .bookq .src {
+    display: block; font-family: 'Spline Sans Mono', monospace;
+    font-size: 0.7rem; color: var(--ink-faint); letter-spacing: 0.15em;
+    margin-top: 12px; text-transform: uppercase; font-style: normal;
+  }
+  .bookq b { color: var(--A); font-weight: 600; }
+  .bookq.def {
+    border-left-color: var(--B);
+    background: rgba(108,176,212,0.05);
+  }
+  .bookq.def b { color: var(--B); }
+  .bookq.warn {
+    border-left-color: var(--post);
+    background: rgba(212,102,58,0.05);
+  }
+  .bookq.warn b { color: var(--post); }
+  .bookq.warn::before {
+    content: "h"; display: inline-block;
+    font-family: 'Newsreader', serif; font-style: italic;
+    color: var(--post); font-weight: 600; margin-right: 8px;
+    border: 1.5px solid var(--post); border-radius: 50%;
+    width: 22px; height: 22px; text-align: center; line-height: 19px;
+    font-size: 0.85rem;
+  }
+
+  /* big centered formula */
+  .formula-hero {
+    text-align: center; margin: 30px 0;
+    font-family: 'Spline Sans Mono', monospace;
+    font-size: clamp(1.35rem, 3.8vw, 1.95rem);
+    color: var(--ink); padding: 28px 10px;
+    border-top: 1px dashed var(--line);
+    border-bottom: 1px dashed var(--line);
+    line-height: 1.5;
+  }
+  .formula-hero .lhs { color: var(--A); }
+  .formula-hero .bar { color: var(--B); margin: 0 2px; font-weight: 600; }
+  .formula-hero .rhs-top { color: var(--AB); }
+  .formula-hero .rhs-bot { color: var(--B); }
+  .formula-hero .prior { color: var(--A); }
+  .formula-hero .like { color: var(--B); }
+  .formula-hero .evi { color: var(--B); }
+  .formula-hero .post { color: var(--post); }
+  .formula-hero .frac {
+    display: inline-flex; flex-direction: column; align-items: center;
+    vertical-align: middle; margin: 0 6px;
+  }
+  .formula-hero .frac > span:first-child {
+    border-bottom: 1.5px solid var(--ink-faint); padding: 0 14px 4px;
+  }
+  .formula-hero .frac > span:last-child { padding-top: 4px; }
+  .formula-hero .eq { margin: 0 12px; color: var(--ink-faint); }
+  .formula-hero .label {
+    display: block; font-family: 'Noto Sans TC';
+    font-size: 0.82rem; color: var(--ink-faint);
+    margin-top: 14px; letter-spacing: 0.08em;
+  }
+  .formula-hero .label .post-tag { color: var(--post); }
+  .formula-hero .label .like-tag { color: var(--B); }
+  .formula-hero .label .prior-tag { color: var(--A); }
+  .formula-hero .label .evi-tag { color: var(--B); }
+
+  /* multi-line derivation */
+  .derive {
+    background: var(--bg-soft); border: 1px solid var(--line);
+    border-radius: 12px; padding: 22px 24px; margin: 22px 0;
+    font-family: 'Spline Sans Mono', monospace; font-size: 1rem;
+    overflow-x: auto;
+  }
+  .derive .row {
+    display: flex; align-items: center; gap: 14px;
+    padding: 8px 0; min-height: 38px; flex-wrap: wrap;
+  }
+  .derive .row.indent { padding-left: clamp(40px, 12vw, 90px); }
+  .derive .row .eq { color: var(--ink-faint); }
+  .derive .row .lhs { color: var(--A); font-weight: 500; }
+  .derive .row .note {
+    font-family: 'Noto Sans TC'; font-size: 0.85rem;
+    color: var(--ink-faint); margin-left: auto; font-weight: 400;
+  }
+  .derive .row.result { border-top: 1px dashed var(--line); margin-top: 6px; padding-top: 14px; }
+  .derive .row.result .ans { color: var(--post); font-weight: 600; font-size: 1.1rem; }
+  .derive .frac {
+    display: inline-flex; flex-direction: column; align-items: center;
+    vertical-align: middle;
+  }
+  .derive .frac > span:first-child {
+    border-bottom: 1.5px solid var(--ink-faint); padding: 0 10px 3px;
+  }
+  .derive .frac > span:last-child { padding-top: 3px; padding-left: 6px; padding-right: 6px; }
+  .derive .gold { color: var(--A); }
+  .derive .blue { color: var(--B); }
+  .derive .green { color: var(--AB); }
+  .derive .post { color: var(--post); }
+  .derive .step-hidden { display: none; }
+  .derive .step-shown { display: flex; animation: fadeUp 0.55s ease; }
+
+  /* question card */
+  .q {
+    background: linear-gradient(160deg, var(--panel), var(--bg-soft));
+    border: 1px solid var(--line); border-radius: 14px;
+    padding: 26px 24px; margin: 30px 0;
+    box-shadow: 0 14px 40px rgba(0,0,0,0.35);
+    position: relative; overflow: hidden;
+  }
+  .q::before {
+    content: "?"; position: absolute; top: -18px; right: 4px;
+    font-family: 'Newsreader', serif; font-size: 8rem; font-style: italic;
+    color: rgba(108,176,212,0.07); pointer-events: none;
+  }
+  .q-label {
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.72rem;
+    letter-spacing: 0.2em; text-transform: uppercase; color: var(--B);
+    margin-bottom: 14px;
+  }
+  .q-text { color: var(--ink); font-size: 1.06rem; font-weight: 500;
+    margin-bottom: 20px; line-height: 1.6; }
+  .q-text .small { display:block; font-weight:400; color: var(--ink-soft);
+    font-size: 0.93rem; margin-top: 8px; }
+
+  .opts { display: flex; flex-direction: column; gap: 11px; }
+  .opt {
+    text-align: left; background: var(--bg); border: 1px solid var(--line);
+    color: var(--ink-soft); padding: 13px 18px; border-radius: 9px;
+    cursor: pointer; font-family: inherit; font-size: 0.98rem;
+    transition: all 0.2s; position: relative; line-height: 1.45;
+  }
+  .opt:hover:not(.locked) { border-color: var(--B); color: var(--ink); transform: translateX(3px); }
+  .opt.correct { border-color: var(--good); background: rgba(95,184,122,0.1); color: var(--ink); }
+  .opt.wrong { border-color: var(--bad); background: rgba(214,95,110,0.08); }
+  .opt .mark { float: right; font-weight: 700; }
+
+  .feedback {
+    margin-top: 18px; padding: 16px 18px; border-radius: 9px;
+    background: var(--bg); border-left: 3px solid var(--B);
+    font-size: 0.97rem; color: var(--ink-soft); display: none;
+  }
+  .feedback.show { display: block; animation: fadeUp 0.45s ease; }
+  .feedback strong { color: var(--ink); }
+  .feedback b { color: var(--B); }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+
+  .reflect textarea {
+    width: 100%; background: var(--bg); border: 1px solid var(--line);
+    color: var(--ink); border-radius: 9px; padding: 14px; font-family: inherit;
+    font-size: 0.98rem; resize: vertical; min-height: 90px; line-height: 1.6;
+  }
+  .reflect textarea:focus { outline: none; border-color: var(--B); }
+
+  .btn {
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.85rem;
+    letter-spacing: 0.05em; background: var(--B); color: #0e1116; border: none;
+    padding: 11px 22px; border-radius: 8px; cursor: pointer; margin-top: 14px;
+    transition: all 0.2s; font-weight: 600;
+  }
+  .btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+  .btn:disabled { opacity: 0.5; cursor: default; transform: none; }
+  .btn.ghost { background: transparent; border: 1px solid var(--line); color: var(--ink-soft); font-weight: 400; }
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  /* mantra */
+  .mantra {
+    font-family: 'Newsreader', serif; font-style: italic;
+    font-size: clamp(1.4rem, 3.6vw, 1.95rem); line-height: 1.4;
+    color: var(--ink); text-align: center; margin: 36px 0;
+    padding: 30px 10px;
+  }
+  .mantra b { font-style: normal; color: var(--B); font-weight: 600; }
+  .mantra .zh {
+    display: block; font-family: 'Noto Sans TC'; font-style: normal;
+    font-size: 1rem; color: var(--ink-faint); margin-top: 18px;
+    letter-spacing: 0.08em;
+  }
+
+  .gated { display: none; }
+  .gated.show { display: block; animation: fadeUp 0.55s ease; }
+
+  /* LOTP partition diagram (Figure 2.3) */
+  .lotp-stage {
+    background: var(--bg-soft); border: 1px solid var(--line);
+    border-radius: 12px; padding: 22px 18px; margin: 26px 0;
+  }
+  .lotp-stage svg { width: 100%; height: auto; display: block; }
+  .lotp-controls {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    justify-content: center; margin-top: 14px;
+  }
+  .lotp-controls button {
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.82rem;
+    background: var(--bg); border: 1px solid var(--line); color: var(--ink-soft);
+    padding: 8px 14px; border-radius: 7px; cursor: pointer; transition: all 0.2s;
+  }
+  .lotp-controls button:hover { border-color: var(--B); color: var(--ink); }
+  .lotp-controls button.active { background: var(--B); color: #0e1116; border-color: var(--B); font-weight: 600; }
+  .lotp-caption {
+    text-align: center; font-family: 'Newsreader', serif; font-style: italic;
+    color: var(--ink-soft); font-size: 0.97rem; margin-top: 12px;
+    min-height: 3.2em;
+  }
+  .lotp-caption b { font-style: normal; color: var(--B); font-weight: 600; }
+  .lotp-caption .gold { color: var(--A); font-style: normal; font-weight: 600; }
+  .lotp-caption .green { color: var(--AB); font-style: normal; font-weight: 600; }
+
+  /* Disease testing visualization (Figure 2.4) */
+  .disease-stage {
+    background: var(--bg-soft); border: 1px solid var(--line);
+    border-radius: 12px; padding: 22px 20px; margin: 26px 0;
+  }
+  .disease-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+    margin: 18px 0;
+  }
+  .disease-cell {
+    background: var(--bg); border: 1px solid var(--line);
+    border-radius: 10px; padding: 14px;
+    text-align: center; transition: all 0.5s ease;
+    position: relative;
+  }
+  .disease-cell .label {
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.74rem;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--ink-faint); margin-bottom: 8px;
+  }
+  .disease-cell .count {
+    font-family: 'Newsreader', serif; font-weight: 500;
+    font-size: clamp(1.6rem, 4vw, 2.1rem); line-height: 1;
+    margin-bottom: 4px;
+  }
+  .disease-cell .desc {
+    font-family: 'Noto Sans TC'; font-size: 0.82rem;
+    color: var(--ink-faint); margin-top: 6px;
+  }
+  .disease-cell.tp { border-color: var(--AB); }
+  .disease-cell.tp .count { color: var(--AB); }
+  .disease-cell.fn { border-color: rgba(214,95,110,0.5); }
+  .disease-cell.fn .count { color: var(--bad); }
+  .disease-cell.fp { border-color: rgba(214,95,110,0.5); }
+  .disease-cell.fp .count { color: var(--bad); }
+  .disease-cell.tn { border-color: var(--AB); }
+  .disease-cell.tn .count { color: var(--AB); }
+  .disease-cell.dimmed { opacity: 0.22; filter: grayscale(1); }
+
+  .slider-row {
+    display: flex; align-items: center; gap: 14px;
+    margin: 14px 0; flex-wrap: wrap;
+  }
+  .slider-row label {
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.85rem;
+    color: var(--ink-soft); min-width: 120px;
+  }
+  .slider-row input[type="range"] {
+    flex: 1; min-width: 200px; accent-color: var(--B);
+  }
+  .slider-row .val {
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.95rem;
+    color: var(--A); font-weight: 600; min-width: 60px; text-align: right;
+  }
+  .disease-result {
+    background: var(--bg); border-left: 3px solid var(--post);
+    border-radius: 0 8px 8px 0; padding: 14px 18px; margin-top: 16px;
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.98rem;
+    color: var(--ink-soft); line-height: 1.7;
+  }
+  .disease-result .ans { color: var(--post); font-weight: 600; font-size: 1.1rem; }
+  .disease-result .lhs { color: var(--A); }
+
+  /* Six-fingered man n-slider visualization */
+  .sixf-stage {
+    background: var(--bg-soft); border: 1px solid var(--line);
+    border-radius: 12px; padding: 22px 20px; margin: 24px 0;
+  }
+  .sixf-result {
+    background: var(--bg); border: 1px solid var(--line);
+    border-radius: 8px; padding: 16px 20px; margin-top: 14px;
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.98rem;
+    color: var(--ink-soft); line-height: 1.8;
+  }
+  .sixf-result .ans { color: var(--post); font-weight: 600; }
+  .sixf-result .lhs { color: var(--A); }
+  .sixf-result .small { font-size: 0.85rem; color: var(--ink-faint); display:block; margin-top: 6px; }
+  .sixf-bar {
+    height: 14px; background: var(--bg); border: 1px solid var(--line);
+    border-radius: 7px; overflow: hidden; margin-top: 10px;
+  }
+  .sixf-bar-fill {
+    height: 100%; background: linear-gradient(90deg, var(--A), var(--post));
+    transition: width 0.3s ease;
+  }
+
+  /* finale recap */
+  .finale { text-align: left; padding: 80px 0 60px; }
+  .recap { display: grid; gap: 14px; margin: 30px 0; }
+  .recap-item {
+    background: var(--bg-soft); border: 1px solid var(--line); border-radius: 10px;
+    padding: 16px 20px; display: flex; gap: 14px; align-items: flex-start;
+  }
+  .recap-item .num {
+    font-family: 'Spline Sans Mono', monospace; color: var(--B);
+    font-size: 0.85rem; font-weight: 600; flex-shrink: 0; padding-top: 2px;
+  }
+  .recap-item p { margin: 0; font-size: 0.96rem; color: var(--ink-soft); }
+  .recap-item b { color: var(--ink); }
+
+  .next-up {
+    background: rgba(108,176,212,0.06); border: 1px dashed var(--B);
+    border-radius: 10px; padding: 18px 22px; margin: 30px 0 0;
+    font-size: 0.97rem; color: var(--ink-soft);
+  }
+  .next-up b { color: var(--B); }
+  .next-up .formula {
+    display: block; font-family: 'Spline Sans Mono', monospace;
+    color: var(--A); margin-top: 8px;
+  }
+
+  footer {
+    text-align: center; padding: 50px 0; border-top: 1px solid var(--line);
+    color: var(--ink-faint); font-size: 0.85rem;
+  }
+
+  code {
+    font-family: 'Spline Sans Mono', ui-monospace, monospace;
+    font-size: 0.92em;
+    color: var(--A);
+    background: rgba(201,162,39,0.08);
+    padding: 1px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+  code.b-tone { color: var(--B); background: rgba(108,176,212,0.08); }
+  code.ab-tone { color: var(--AB); background: rgba(95,184,122,0.08); }
+  code.post-tone { color: var(--post); background: rgba(212,102,58,0.08); }
+
+  .src-tag {
+    display: inline-block; font-family: 'Spline Sans Mono', monospace;
+    font-size: 0.68rem; color: var(--ink-faint); letter-spacing: 0.12em;
+    text-transform: uppercase; margin-left: 10px;
+    padding: 2px 8px; border: 1px solid var(--line); border-radius: 4px;
+  }
+
+  details {
+    background: var(--bg-soft); border: 1px solid var(--line); border-radius: 8px;
+    padding: 14px 18px; margin: 14px 0;
+  }
+  details summary {
+    cursor: pointer; font-family: 'Spline Sans Mono', monospace;
+    font-size: 0.85rem; color: var(--B); letter-spacing: 0.1em;
+    text-transform: uppercase; outline: none;
+  }
+  details[open] summary { margin-bottom: 12px; }
+  details p { margin: 8px 0; font-size: 0.97rem; }
+
+  /* table for odds form interpretation */
+  .interp-table {
+    width: 100%; border-collapse: collapse; margin: 18px 0;
+    font-size: 0.96rem;
+  }
+  .interp-table th, .interp-table td {
+    padding: 12px 14px; text-align: left;
+    border-bottom: 1px solid var(--line);
+  }
+  .interp-table th {
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.78rem;
+    letter-spacing: 0.12em; color: var(--ink-faint);
+    text-transform: uppercase; font-weight: 500;
+  }
+  .interp-table td { color: var(--ink-soft); }
+  .interp-table td.role { color: var(--B); font-family: 'Spline Sans Mono', monospace; font-size: 0.88rem; }
+  .interp-table td.expr { color: var(--A); font-family: 'Spline Sans Mono', monospace; font-weight: 500; }
+</style>
+</head>
+<body>
+
+<div id="rail"><div id="rail-fill"></div></div>
+<nav id="dots"></nav>
+
+<div class="wrap">
+
+  <!-- ============ HERO ============ -->
+  <header>
+    <div class="eyebrow">Chapter 2 · §2.3</div>
+    <h1>Bayes' rule and the law of total probability
+      <span class="zh">把上節定義裡的「分母搬一下」 — 一搬就搬出了統計推論的兩根支柱</span>
+    </h1>
+    <div class="hero-quote">
+      Bayes' rule … relates P(A|B) to P(B|A). The law of total probability allows us to compute conditional probabilities in a wide range of problems.
+      <span class="src">— §2.3 opening, p.53</span>
+    </div>
+    <div class="scroll-hint"><span class="arrow">↓</span> 兩條定理、一條陳氏鏈、三個應用例子</div>
+  </header>
+
+  <!-- ============ STAGE 1: Theorem 2.3.1 + 2.3.2 ============ -->
+  <section class="stage" id="s1">
+    <div class="stage-tag">錨點 1 · 把分母搬到另一邊</div>
+    <h2>Probability of the intersection<span class="src-tag">p.52–53 · Thm 2.3.1, 2.3.2</span></h2>
+
+    <p>上一節的定義是 <code>P(A|B) = P(A ∩ B) / P(B)</code>。書中說:</p>
+
+    <div class="bookq">
+      The definition of conditional probability is simple—just a ratio of two probabilities—but it has <b>far-reaching consequences</b>. The first consequence is obtained easily by moving the denominator in the definition to the other side of the equation.
+      <span class="src">— §2.3 ¶1, p.52</span>
+    </div>
+
+    <p>把分母 <code class="b-tone">P(B)</code> 搬過去,就得到本節第一個定理。</p>
+
+    <div class="bookq">
+      <b>Theorem 2.3.1 (Probability of the intersection of two events).</b> For any events A and B with positive probabilities,
+      <span class="src">— p.52</span>
+    </div>
+
+    <div class="formula-hero">
+      <span class="rhs-top">P(A ∩ B)</span>
+      <span class="eq">=</span>
+      <span class="prior">P(B)</span><span class="like">P(A<span class="bar">|</span>B)</span>
+      <span class="eq">=</span>
+      <span class="prior">P(A)</span><span class="like">P(B<span class="bar">|</span>A)</span>
+    </div>
+
+    <p>看起來只是「定義換個寫法」,可是它在實務上極好用 — 很多情境裡,<strong>條件機率比聯合機率好找</strong>(例如「已知病人有病,檢驗為陽性的機率」比起「病人同時有病又檢驗陽性的機率」直觀得多),這時就用 Theorem 2.3.1 反推出 <code class="ab-tone">P(A ∩ B)</code>。</p>
+
+    <h3>n 個事件的鏈式展開</h3>
+
+    <p>反覆套用 Thm 2.3.1,就能展開任意多事件的交集機率:</p>
+
+    <div class="bookq">
+      <b>Theorem 2.3.2 (Probability of the intersection of n events).</b> For any events A<sub>1</sub>, …, A<sub>n</sub> with P(A<sub>1</sub>, …, A<sub>n−1</sub>) &gt; 0,
+      <span class="src">— p.53</span>
+    </div>
+
+    <div class="formula-hero" style="font-size: clamp(1.05rem, 2.6vw, 1.4rem);">
+      P(A<sub>1</sub>, A<sub>2</sub>, …, A<sub>n</sub>)
+      <span class="eq">=</span>
+      P(A<sub>1</sub>) · P(A<sub>2</sub>|A<sub>1</sub>) · P(A<sub>3</sub>|A<sub>1</sub>, A<sub>2</sub>) · ⋯ · P(A<sub>n</sub>|A<sub>1</sub>, …, A<sub>n−1</sub>)
+      <span class="label" style="font-family:'Newsreader',serif; font-style:italic;">逗號代表交集;每個條件項都把先前已知的事件全部放進條件裡</span>
+    </div>
+
+    <p>書裡點出一個有趣的事:這條展開式其實是 <em>n!</em> 條定理 — 因為左邊跟順序無關,而右邊可以用 A<sub>1</sub>, …, A<sub>n</sub> 的任何排列展開。某些排列會比其他排列<strong>好算很多</strong>。例如:</p>
+
+    <div class="formula-hero" style="font-size: clamp(0.98rem, 2.4vw, 1.25rem);">
+      P(A<sub>1</sub>, A<sub>2</sub>, A<sub>3</sub>)
+      <span class="eq">=</span>
+      P(A<sub>1</sub>)P(A<sub>2</sub>|A<sub>1</sub>)P(A<sub>3</sub>|A<sub>1</sub>, A<sub>2</sub>)
+      <br>
+      <span style="opacity:0.7;">
+        <span class="eq">=</span>
+        P(A<sub>2</sub>)P(A<sub>3</sub>|A<sub>2</sub>)P(A<sub>1</sub>|A<sub>2</sub>, A<sub>3</sub>)
+        <span class="eq">=</span> ⋯
+      </span>
+    </div>
+
+    <p>共 6 種展開法。<strong>挑哪個順序展開,是經驗活</strong>。</p>
+
+    <div class="q">
+      <div class="q-label">小測驗</div>
+      <div class="q-text">袋子裡有 5 顆球,3 顆紅 2 顆藍。不放回地連抽 3 顆。要算「三顆都是紅球」的機率,下列哪個展開最直接?
+        <span class="small">設 R<sub>i</sub> = 第 i 次抽到紅球。</span></div>
+      <div class="opts">
+        <button class="opt" data-correct="true">P(R<sub>1</sub>) · P(R<sub>2</sub>|R<sub>1</sub>) · P(R<sub>3</sub>|R<sub>1</sub>, R<sub>2</sub>) = (3/5)(2/4)(1/3)</button>
+        <button class="opt" data-correct="false">P(R<sub>3</sub>) · P(R<sub>2</sub>|R<sub>3</sub>) · P(R<sub>1</sub>|R<sub>2</sub>, R<sub>3</sub>)</button>
+        <button class="opt" data-correct="false">直接寫成 P(R<sub>1</sub> ∩ R<sub>2</sub> ∩ R<sub>3</sub>) 然後窮舉樣本空間</button>
+      </div>
+      <div class="feedback" data-fb>
+        <strong>沿時序展開最自然。</strong> 第二個答案在數學上完全等價,但要先算 P(R<sub>3</sub>)(還沒抽就先問第三次?需先用 LOTP 算),工夫白費。第三個答案會把問題搞成排列組合,失去條件機率帶來的簡化。<br><br>
+        <b>核心觀念:</b>Thm 2.3.2 的價值不只是「能展開」,而是<em>會挑展開順序</em> — 順時序、由易到難。
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STAGE 2: Bayes' rule ============ -->
+  <section class="stage" id="s2">
+    <div class="stage-tag">錨點 2 · 主角登場</div>
+    <h2>Bayes' rule<span class="src-tag">p.53 · Thm 2.3.3</span></h2>
+
+    <p>把 Thm 2.3.1 的兩個等式串起來 — <code class="ab-tone">P(A ∩ B) = P(A)P(B|A) = P(B)P(A|B)</code> — 兩邊除以 <code class="b-tone">P(B)</code>,主角就出來了:</p>
+
+    <div class="bookq def">
+      <b>Theorem 2.3.3 (Bayes' rule).</b>
+      <span class="src">— p.53</span>
+    </div>
+
+    <div class="formula-hero">
+      <span class="post">P(A<span class="bar">|</span>B)</span>
+      <span class="eq">=</span>
+      <span class="frac">
+        <span><span class="like">P(B<span class="bar">|</span>A)</span><span class="prior">P(A)</span></span>
+        <span class="evi">P(B)</span>
+      </span>
+      <span class="label">
+        <span class="post-tag">posterior</span> &nbsp;=&nbsp;
+        <span class="like-tag">likelihood</span> &nbsp;×&nbsp;
+        <span class="prior-tag">prior</span> &nbsp;/&nbsp;
+        <span class="evi-tag">evidence</span>
+      </span>
+    </div>
+
+    <p>數學上,這是上節定義加一次代數操作就掉出來的結果。可是書直接給它的地位是「<em>extremely famous, extremely useful</em>」。為什麼?</p>
+
+    <div class="bookq">
+      Yet Bayes' rule has important implications and applications in probability and statistics, since it is so often necessary to find conditional probabilities, and often <b>P(B|A) is much easier to find directly than P(A|B)</b> (or vice versa).
+      <span class="src">— §2.3 ¶ on Thm 2.3.3, p.53</span>
+    </div>
+
+    <p>真正的價值在這句:<strong>反向比正向好算</strong>。Bayes' rule 是把好算的那個方向,翻轉成我們想要的那個方向。</p>
+
+    <div class="q reflect">
+      <div class="q-label">想想看 · 開放題</div>
+      <div class="q-text">舉一個你的生活情境:<code>P(B|A)</code> 容易估,但 <code class="post-tone">P(A|B)</code> 才是你真正想知道的。
+        <span class="small">提示:看醫生、抓 spam、垃圾郵件、刑事鑑定、考試逆推…</span></div>
+      <textarea placeholder="例如:容易估的是「如果這封信是廣告,它含『限時優惠』的機率」;想知道的是「這封信含『限時優惠』,它是廣告的機率」…"></textarea>
+      <div class="btn-row">
+        <button class="btn" data-reveal>看一個範例</button>
+      </div>
+      <div class="feedback" data-fb>
+        <strong>醫療檢驗</strong>是教科書級例子(本節 Example 2.3.9 就是):醫生說「這個檢驗 95% 準確」,字面上意思是 <code class="b-tone">P(陽性 | 有病) ≈ 0.95</code> 跟 <code class="b-tone">P(陰性 | 沒病) ≈ 0.95</code> — 從測試廠商的角度,給「已知有病」的人做測試,看結果有多準是<b>容易做實驗</b>的。<br><br>
+        但病人真正想知道的是 <code class="post-tone">P(有病 | 測出陽性)</code> — 反方向。Bayes' rule 就是橋。<br><br>
+        <em>這個例子稍後會在 Stage 6 詳細計算 — 答案會嚇你一跳。</em>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STAGE 3: Odds + odds form of Bayes ============ -->
+  <section class="stage" id="s3">
+    <div class="stage-tag">錨點 3 · 換一個寫法</div>
+    <h2>Odds form of Bayes' rule<span class="src-tag">p.53–54 · Def 2.3.4, Thm 2.3.5</span></h2>
+
+    <p>有時候用<strong>勝算(odds)</strong>而不是機率,反而看 Bayes' rule 看得更清楚。先定義 odds:</p>
+
+    <div class="bookq def">
+      <b>Definition 2.3.4 (Odds).</b> The odds of an event A are
+      <span class="src">— p.53</span>
+    </div>
+
+    <div class="formula-hero">
+      odds(A)
+      <span class="eq">=</span>
+      <span class="frac">
+        <span class="prior">P(A)</span>
+        <span class="evi">P(A<sup>c</sup>)</span>
+      </span>
+    </div>
+
+    <p>例如 <code>P(A) = 2/3</code> → <code>odds(A) = (2/3) / (1/3) = 2</code> → 寫成「2 比 1 賭 A 會發生」(2 : 1 in favor of A)。注意賭場常講「odds against」,跟「odds in favor」剛好倒過來 — 看哪邊發的源頭。</p>
+
+    <p>反過來:若已知 odds,也能還原機率:<code>P(A) = odds(A) / (1 + odds(A))</code>。</p>
+
+    <h3>Bayes' rule 的 odds 形式</h3>
+
+    <p>把 Bayes' rule 套在 A 上面,再把它套在 A<sup>c</sup> 上面,兩式相除:</p>
+
+    <div class="bookq">
+      <b>Theorem 2.3.5 (Odds form of Bayes' rule).</b> For any events A and B with positive probabilities, the odds of A after conditioning on B are
+      <span class="src">— p.54</span>
+    </div>
+
+    <div class="formula-hero">
+      <span class="frac">
+        <span class="post">P(A<span class="bar">|</span>B)</span>
+        <span class="post">P(A<sup>c</sup><span class="bar">|</span>B)</span>
+      </span>
+      <span class="eq">=</span>
+      <span class="frac">
+        <span class="like">P(B<span class="bar">|</span>A)</span>
+        <span class="like">P(B<span class="bar">|</span>A<sup>c</sup>)</span>
+      </span>
+      <span class="eq">·</span>
+      <span class="frac">
+        <span class="prior">P(A)</span>
+        <span class="prior">P(A<sup>c</sup>)</span>
+      </span>
+    </div>
+
+    <p>這個寫法的<strong>美</strong>:三個比值各自有名字。</p>
+
+    <table class="interp-table">
+      <thead>
+        <tr><th>位置</th><th>名稱</th><th>意義</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="expr">P(A|B) / P(A<sup>c</sup>|B)</td>
+          <td class="role">posterior odds</td>
+          <td>看到證據 B 之後,A 的勝算</td>
+        </tr>
+        <tr>
+          <td class="expr">P(A) / P(A<sup>c</sup>)</td>
+          <td class="role">prior odds</td>
+          <td>看到證據前,A 的勝算</td>
+        </tr>
+        <tr>
+          <td class="expr">P(B|A) / P(B|A<sup>c</sup>)</td>
+          <td class="role">likelihood ratio</td>
+          <td>證據 B 在「A 為真」與「A 為假」下出現的可能性之比</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="mantra">
+      posterior odds = prior odds × likelihood ratio
+      <span class="zh">看完證據的勝算 = 看證據前的勝算 × 證據的「指示強度」</span>
+    </div>
+
+    <p>這個形式直接告訴你:每次收到一個新證據,就把當前勝算「乘上」這個證據的 likelihood ratio。比 <code>P(A|B) = P(B|A)P(A)/P(B)</code> 少了分母 <code class="b-tone">P(B)</code> 的計算 — 想要把機率還原也好辦,套 odds → probability 的公式。</p>
+
+    <div class="q">
+      <div class="q-label">小測驗</div>
+      <div class="q-text">假設某種疾病的 prior 是 <code>P(D) = 1/100</code>(prior odds ≈ 1 : 99),做一次檢驗,得到 likelihood ratio = 19(即 P(陽性|有病)/P(陽性|沒病) = 0.95/0.05 = 19)。<br>那 <strong>posterior odds</strong> 是?</div>
+      <div class="opts">
+        <button class="opt" data-correct="false">19 : 1(直接讀 likelihood ratio)</button>
+        <button class="opt" data-correct="true">19 : 99(prior odds × likelihood ratio = (1/99) × 19)</button>
+        <button class="opt" data-correct="false">1 : 99(prior 不動,因為證據沒講明)</button>
+        <button class="opt" data-correct="false">95 : 5(直接套 P(陽性|有病))</button>
+      </div>
+      <div class="feedback" data-fb>
+        <strong>第二個對。</strong> Posterior odds = (1/99) × 19 = 19/99,約 0.192,換回機率約 19/118 ≈ <code class="post-tone">0.161</code>。<br><br>
+        這正是稍後 Example 2.3.9 (Stage 6) 的答案 ≈ 0.16。用 odds form 算<strong>一行就出來</strong>,不必把 LOTP 寫完。<br><br>
+        <b>反直覺點:</b>likelihood ratio 19 聽起來「測得很準」,但 prior 1 : 99 太懸殊,乘出來還是只把 A 推到 19 : 99,沒翻過 50% 的中線。
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STAGE 4: Law of total probability ============ -->
+  <section class="stage" id="s4">
+    <div class="stage-tag">錨點 4 · 把樣本空間切片</div>
+    <h2>The law of total probability<span class="src-tag">p.54–55 · Thm 2.3.6</span></h2>
+
+    <p>Bayes' rule 算到 <code class="b-tone">P(B)</code> 那個分母時,常常會卡 — 因為我們手上有的常常是<strong>條件機率</strong> P(B|某情況),而不是<strong>無條件</strong>機率 P(B)。怎麼辦?把 P(B) 拆成<em>各種情況下的條件機率加權總和</em>。</p>
+
+    <div class="bookq">
+      <b>Theorem 2.3.6 (Law of total probability).</b> Let A<sub>1</sub>, …, A<sub>n</sub> be a <b>partition</b> of the sample space S (i.e., the A<sub>i</sub> are disjoint events and their union is S), with P(A<sub>i</sub>) &gt; 0 for all i. Then
+      <span class="src">— p.54</span>
+    </div>
+
+    <div class="formula-hero">
+      <span class="evi">P(B)</span>
+      <span class="eq">=</span>
+      <span style="font-size:1.4em;vertical-align:-0.15em;">Σ</span><sub style="margin-left:-12px;">i=1</sub><sup style="margin-left:-8px;">n</sup>
+      &nbsp;<span class="like">P(B<span class="bar">|</span>A<sub>i</sub>)</span><span class="prior">P(A<sub>i</sub>)</span>
+    </div>
+
+    <h3>為什麼可以這樣拆 — 看圖</h3>
+
+    <p>下圖對應書中 <strong>Figure 2.3</strong> (p.55):樣本空間被切成 A<sub>1</sub>, …, A<sub>6</sub> 六片(切法不一定要均勻,只要互斥且窮盡)。事件 B 跨在這些切片上 — 它在每一片裡都佔了一塊 B ∩ A<sub>i</sub>。</p>
+
+    <div class="lotp-stage">
+      <svg id="lotp-svg" viewBox="0 0 600 320" xmlns="http://www.w3.org/2000/svg">
+        <!-- background partition strips -->
+        <g id="partitions">
+          <rect class="part" data-i="1" x="20"  y="180" width="90" height="120" fill="rgba(201,162,39,0.18)" stroke="var(--p1)" stroke-width="1"/>
+          <rect class="part" data-i="2" x="110" y="180" width="80" height="120" fill="rgba(108,176,212,0.18)" stroke="var(--p2)" stroke-width="1"/>
+          <rect class="part" data-i="3" x="190" y="180" width="110" height="120" fill="rgba(95,184,122,0.18)" stroke="var(--p3)" stroke-width="1"/>
+          <rect class="part" data-i="4" x="300" y="180" width="90" height="120" fill="rgba(212,102,58,0.18)" stroke="var(--p4)" stroke-width="1"/>
+          <rect class="part" data-i="5" x="390" y="180" width="110" height="120" fill="rgba(164,129,194,0.18)" stroke="var(--p5)" stroke-width="1"/>
+          <rect class="part" data-i="6" x="500" y="180" width="80" height="120" fill="rgba(212,160,108,0.18)" stroke="var(--p6)" stroke-width="1"/>
+          <!-- labels on partitions -->
+          <text x="65"  y="320" fill="var(--p1)" font-family="Spline Sans Mono" font-size="14" text-anchor="middle">A₁</text>
+          <text x="150" y="320" fill="var(--p2)" font-family="Spline Sans Mono" font-size="14" text-anchor="middle">A₂</text>
+          <text x="245" y="320" fill="var(--p3)" font-family="Spline Sans Mono" font-size="14" text-anchor="middle">A₃</text>
+          <text x="345" y="320" fill="var(--p4)" font-family="Spline Sans Mono" font-size="14" text-anchor="middle">A₄</text>
+          <text x="445" y="320" fill="var(--p5)" font-family="Spline Sans Mono" font-size="14" text-anchor="middle">A₅</text>
+          <text x="540" y="320" fill="var(--p6)" font-family="Spline Sans Mono" font-size="14" text-anchor="middle">A₆</text>
+        </g>
+
+        <!-- B blob: organic blob shape crossing partitions -->
+        <g id="b-blob">
+          <path id="b-shape" d="M 60,100 Q 30,60 80,40 Q 160,15 240,55 Q 320,30 380,70 Q 470,50 520,100 Q 560,140 510,180 Q 450,200 380,180 Q 280,200 200,180 Q 130,200 80,180 Q 30,160 60,100 Z"
+            fill="none" stroke="var(--ink)" stroke-width="2" stroke-dasharray="0"/>
+          <text x="300" y="115" fill="var(--ink)" font-family="Newsreader" font-style="italic" font-size="34" text-anchor="middle">B</text>
+        </g>
+
+        <!-- intersection pieces (initially hidden, drawn over B blob) -->
+        <g id="intersections" opacity="0">
+          <!-- each piece is the rectangular slice of B clipped by partition i -->
+          <clipPath id="clip-b">
+            <path d="M 60,100 Q 30,60 80,40 Q 160,15 240,55 Q 320,30 380,70 Q 470,50 520,100 Q 560,140 510,180 Q 450,200 380,180 Q 280,200 200,180 Q 130,200 80,180 Q 30,160 60,100 Z"/>
+          </clipPath>
+          <rect class="ipart" data-i="1" x="20"  y="20" width="90"  height="170" fill="rgba(201,162,39,0.55)" clip-path="url(#clip-b)"/>
+          <rect class="ipart" data-i="2" x="110" y="20" width="80"  height="170" fill="rgba(108,176,212,0.55)" clip-path="url(#clip-b)"/>
+          <rect class="ipart" data-i="3" x="190" y="20" width="110" height="170" fill="rgba(95,184,122,0.55)" clip-path="url(#clip-b)"/>
+          <rect class="ipart" data-i="4" x="300" y="20" width="90"  height="170" fill="rgba(212,102,58,0.55)" clip-path="url(#clip-b)"/>
+          <rect class="ipart" data-i="5" x="390" y="20" width="110" height="170" fill="rgba(164,129,194,0.55)" clip-path="url(#clip-b)"/>
+          <rect class="ipart" data-i="6" x="500" y="20" width="80"  height="170" fill="rgba(212,160,108,0.55)" clip-path="url(#clip-b)"/>
+        </g>
+      </svg>
+      <div class="lotp-controls" id="lotp-controls">
+        <button data-step="0" class="active">原圖 · S 被切成 6 片</button>
+        <button data-step="1">把 B 切成 B ∩ A<sub>i</sub></button>
+        <button data-step="2">加總所有 B ∩ A<sub>i</sub></button>
+      </div>
+      <div class="lotp-caption" id="lotp-caption"></div>
+    </div>
+
+    <h3>證明思路(書中 p.54)</h3>
+
+    <p>因為 A<sub>i</sub> 是 partition,B 可寫成不相交的併集:</p>
+    <div class="formula-hero" style="font-size: clamp(0.98rem, 2.4vw, 1.25rem);">
+      <span class="evi">B</span> = (B ∩ A<sub>1</sub>) ∪ (B ∩ A<sub>2</sub>) ∪ ⋯ ∪ (B ∩ A<sub>n</sub>)
+    </div>
+    <p>由機率第二公設(disjoint 加法性),機率相加:</p>
+    <div class="formula-hero" style="font-size: clamp(0.98rem, 2.4vw, 1.25rem);">
+      <span class="evi">P(B)</span> = P(B ∩ A<sub>1</sub>) + P(B ∩ A<sub>2</sub>) + ⋯ + P(B ∩ A<sub>n</sub>)
+    </div>
+    <p>對每個 P(B ∩ A<sub>i</sub>) 用 Thm 2.3.1 拆成 <code>P(B|A<sub>i</sub>)P(A<sub>i</sub>)</code>,就完成證明。</p>
+
+    <div class="bookq">
+      The choice of how to divide up the sample space is <b>crucial</b>: a well-chosen partition will reduce a complicated problem into simpler pieces, whereas a poorly chosen partition will only exacerbate our problems, requiring us to calculate n difficult probabilities instead of just one!
+      <span class="src">— §2.3 ¶ after Thm 2.3.6, p.54</span>
+    </div>
+
+    <p><strong>切法是門藝術。</strong>下面三個 Example 都會看到「切」的選擇:選對 partition,問題自動拆開;選錯就更糟。</p>
+  </section>
+
+  <!-- ============ STAGE 5: Example 2.3.7 Random coin ============ -->
+  <section class="stage" id="s5">
+    <div class="stage-tag">錨點 5 · 第一個 Bayes + LOTP 範例</div>
+    <h2>Example 2.3.7 · Random coin<span class="src-tag">p.55</span></h2>
+
+    <div class="bookq">
+      You have one fair coin, and one biased coin which lands Heads with probability <b>3/4</b>. You pick one of the coins at random and flip it three times. It lands Heads all three times. Given this information, <b>what is the probability that the coin you picked is the fair one?</b>
+      <span class="src">— Example 2.3.7, p.55</span>
+    </div>
+
+    <p>設 <code>F</code> = 拿到公平幣,<code class="b-tone">A</code> = 三次都正面。我們想要 <code class="post-tone">P(F|A)</code>。</p>
+
+    <p><strong>為什麼 Bayes 派上用場?</strong>我們不知道 <code class="post-tone">P(F|A)</code>,但 <code class="b-tone">P(A|F)</code> 跟 <code class="b-tone">P(A|F<sup>c</sup>)</code> 一眼就看出來 — 知道哪枚幣就知道機率。這就是「反向比正向好算」的典型場景。</p>
+
+    <p>跟 <code class="b-tone">P(A)</code> 也不直接知道 — 但用 LOTP 切過 {F, F<sup>c</sup>} 就出來。</p>
+
+    <div class="q">
+      <div class="q-label">在揭曉前 · 先猜</div>
+      <div class="q-text">先憑直覺猜:你拿到公平幣的<strong>事前(prior)機率</strong>是 1/2;公平幣丟三次都正面是 (1/2)³ = 1/8;偏幣丟三次都正面是 (3/4)³ ≈ 0.42。看到三正面後,你估 <code class="post-tone">P(F|A)</code> 大概在?</div>
+      <div class="opts">
+        <button class="opt" data-correct="false">≈ 0.5 — 三次太短,不夠扭轉先驗</button>
+        <button class="opt" data-correct="true">≈ 0.2 — 偏幣顯著更「合得上」資料</button>
+        <button class="opt" data-correct="false">≈ 0.05 — 三正面幾乎一定是偏幣</button>
+      </div>
+      <div class="feedback" data-fb>
+        <strong>第二個對:書中算出 ≈ 0.23。</strong> 下方逐步展開看怎麼算。
+      </div>
+    </div>
+
+    <h3>逐步展開 · 套 Bayes + LOTP</h3>
+
+    <div class="derive" id="coin-derive">
+      <div class="row step-shown" data-step="1">
+        <span class="lhs post">P(F|A)</span>
+        <span class="eq">=</span>
+        <span class="frac">
+          <span><span class="blue">P(A|F)</span> · <span class="gold">P(F)</span></span>
+          <span class="blue">P(A)</span>
+        </span>
+        <span class="note">Bayes' rule</span>
+      </div>
+      <div class="row step-hidden" data-step="2">
+        <span class="eq">=</span>
+        <span class="frac">
+          <span><span class="blue">P(A|F)</span> · <span class="gold">P(F)</span></span>
+          <span><span class="blue">P(A|F)P(F)</span> + <span class="blue">P(A|F<sup>c</sup>)P(F<sup>c</sup>)</span></span>
+        </span>
+        <span class="note">LOTP 切 {F, F<sup>c</sup>} 展開分母</span>
+      </div>
+      <div class="row step-hidden" data-step="3">
+        <span class="eq">=</span>
+        <span class="frac">
+          <span>(1/2)<sup>3</sup> · (1/2)</span>
+          <span>(1/2)<sup>3</sup> · (1/2) + (3/4)<sup>3</sup> · (1/2)</span>
+        </span>
+        <span class="note">代入數字</span>
+      </div>
+      <div class="row step-hidden result" data-step="4">
+        <span class="eq">≈</span>
+        <span class="ans">0.23</span>
+        <span class="note">化簡:(1/16) / (1/16 + 27/128) = 8/(8+27) = 8/35</span>
+      </div>
+      <div class="btn-row" style="margin-top:14px;">
+        <button class="btn" id="coin-step-btn">下一步 ▸</button>
+        <button class="btn ghost" id="coin-reset-btn">重設</button>
+      </div>
+    </div>
+
+    <p><strong>意義:</strong>看到三次正面之後,「拿到偏幣」的可能性從 1/2 上升到約 0.77。先驗均等,證據傾向偏幣 — 後驗也就傾向偏幣。</p>
+
+    <h3>勿混 prior 與 posterior</h3>
+
+    <div class="bookq warn">
+      <b>(2.3.8) Prior vs. posterior.</b> It would <b>not</b> be correct in the calculation above to say after the first step, "<code>P(A) = 1</code> because we know A happened." It is true that <code>P(A|A) = 1</code>, but <code>P(A)</code> is the <b>prior</b> probability of A and <code>P(F)</code> is the prior probability of F — both are the probabilities before we observe any data in the experiment. These must not be confused with posterior probabilities conditional on the evidence A.
+      <span class="src">— h 2.3.8, p.55–56</span>
+    </div>
+
+    <p>這個警示重要:Bayes' rule 裡的 <code>P(A)</code> 是「實驗開始前、還沒看資料時」的機率;這時 A 還沒被觀察。「我們已經看到 A 發生了所以 P(A) = 1」是把<strong>事件本身的機率</strong>跟<strong>已條件化後的機率</strong>搞混。看到證據之後,我們<em>不是</em>把 P(A) 改成 1,而是用 Bayes 算出<em>新的</em>機率函數 P(·|A)。</p>
+  </section>
+
+  <!-- ============ STAGE 6: Example 2.3.9 Disease testing ============ -->
+  <section class="stage" id="s6">
+    <div class="stage-tag">錨點 6 · 直覺崩塌的經典題</div>
+    <h2>Example 2.3.9 · Testing for a rare disease<span class="src-tag">p.56–57</span></h2>
+
+    <div class="bookq">
+      A patient named Fred is tested for a disease called <b>conditionitis</b>, a medical condition that afflicts <b>1%</b> of the population. The test result is positive. Suppose that the test is "95% accurate"; in this problem it is assumed to mean that <code>P(T|D) = 0.95</code> and <code>P(T<sup>c</sup>|D<sup>c</sup>) = 0.95</code>. <b>Find the conditional probability that Fred has conditionitis, given the evidence provided by the test result.</b>
+      <span class="src">— Example 2.3.9, p.56</span>
+    </div>
+
+    <p>設 <code class="post-tone">D</code> = 有病,<code class="b-tone">T</code> = 檢驗陽性。已知:</p>
+
+    <ul style="color:var(--ink-soft); padding-left:24px; margin-bottom:18px;">
+      <li><code>P(D) = 0.01</code>(盛行率)</li>
+      <li><code class="b-tone">P(T|D) = 0.95</code>(<em>sensitivity</em> · 真陽性率)</li>
+      <li><code class="b-tone">P(T<sup>c</sup>|D<sup>c</sup>) = 0.95</code>(<em>specificity</em> · 真陰性率,所以 <code>P(T|D<sup>c</sup>) = 0.05</code>)</li>
+    </ul>
+
+    <p>想知道 <code class="post-tone">P(D|T)</code>。Bayes + LOTP:</p>
+
+    <div class="derive">
+      <div class="row step-shown">
+        <span class="lhs post">P(D|T)</span>
+        <span class="eq">=</span>
+        <span class="frac">
+          <span><span class="blue">P(T|D)</span> · <span class="gold">P(D)</span></span>
+          <span><span class="blue">P(T|D)P(D)</span> + <span class="blue">P(T|D<sup>c</sup>)P(D<sup>c</sup>)</span></span>
+        </span>
+      </div>
+      <div class="row step-shown">
+        <span class="eq">=</span>
+        <span class="frac">
+          <span>0.95 · 0.01</span>
+          <span>0.95 · 0.01 + 0.05 · 0.99</span>
+        </span>
+      </div>
+      <div class="row step-shown result">
+        <span class="eq">≈</span>
+        <span class="ans">0.16</span>
+        <span class="note">即使測試聲稱「95% 準」,Fred 有病的機率只有 16%</span>
+      </div>
+    </div>
+
+    <p><strong>為什麼會這樣?</strong>書中給了關鍵的一句:</p>
+
+    <div class="bookq">
+      The key to understanding this surprisingly low posterior probability is to realize that there are <b>two factors at play</b>: the evidence from the test, and our prior information about the prevalence of the disease.
+      <span class="src">— §2.3 after Ex 2.3.9, p.57</span>
+    </div>
+
+    <h3>用人頭數來看 · Figure 2.4</h3>
+
+    <p>書中接著用 10000 人來具象化(Figure 2.4, p.57):盛行率 1% → 100 人有病,9900 人沒病。對所有人都做測試:</p>
+
+    <div class="disease-stage">
+      <div class="slider-row">
+        <label>盛行率 P(D)</label>
+        <input type="range" id="prior-slider" min="0.001" max="0.5" step="0.001" value="0.01">
+        <span class="val" id="prior-val">1.0%</span>
+      </div>
+      <div class="slider-row">
+        <label>準確率(sens/spec)</label>
+        <input type="range" id="acc-slider" min="0.5" max="0.999" step="0.001" value="0.95">
+        <span class="val" id="acc-val">95.0%</span>
+      </div>
+
+      <div class="disease-grid">
+        <div class="disease-cell tp">
+          <div class="label">True Positive · 真陽性</div>
+          <div class="count" id="tp-count">95</div>
+          <div class="desc">有病 · 測陽</div>
+        </div>
+        <div class="disease-cell fn">
+          <div class="label">False Negative · 假陰性</div>
+          <div class="count" id="fn-count">5</div>
+          <div class="desc">有病 · 測陰</div>
+        </div>
+        <div class="disease-cell fp">
+          <div class="label">False Positive · 假陽性</div>
+          <div class="count" id="fp-count">495</div>
+          <div class="desc">沒病 · 測陽</div>
+        </div>
+        <div class="disease-cell tn">
+          <div class="label">True Negative · 真陰性</div>
+          <div class="count" id="tn-count">9405</div>
+          <div class="desc">沒病 · 測陰</div>
+        </div>
+      </div>
+
+      <div class="disease-result" id="disease-result">
+        在 10000 人中,測出陽性共 <span class="lhs">590</span> 人(95 真陽 + 495 假陽)。<br>
+        其中真的有病者:<span class="lhs">95 / 590</span> → <span class="ans">P(D|T) ≈ 0.161</span>
+      </div>
+    </div>
+
+    <p>移動滑桿你會看到:<strong>讓盛行率上升,後驗會大幅上升</strong>;<strong>讓準確率上升,後驗也會大幅上升,但需要極高的準確率才能補償極低的盛行率</strong>。書中的整段話就在說這件事:</p>
+
+    <div class="bookq">
+      Although the test provides evidence in favor of disease, conditionitis is also a rare condition! The conditional probability P(D|T) reflects a balance between these two factors, appropriately <b>weighing the rarity of the disease against the rarity of a mistaken test result</b>.
+      <span class="src">— p.57</span>
+    </div>
+
+    <p>把鏡頭聚焦到陽性那一列(條件化在 T = 陽性):<strong>95 個真陽性被 495 個假陽性蓋過去</strong>。陽性裡大部分人其實沒病 — 這是低盛行率疾病做篩檢的根本困境。</p>
+  </section>
+
+  <!-- ============ STAGE 7: Example 2.3.10 Six-fingered man ============ -->
+  <section class="stage" id="s7">
+    <div class="stage-tag">錨點 7 · Bayes + LOTP 進階應用</div>
+    <h2>Example 2.3.10 · The six-fingered man<span class="src-tag">p.58</span></h2>
+
+    <div class="bookq">
+      A crime has been committed in a certain country. The perpetrator is one (and only one) of the <b>n</b> men who live in the country. Initially, these n men are all deemed equally likely to be the perpetrator. An eyewitness then reports that the crime was committed by a man with <b>six fingers on his right hand</b>.
+      <span class="src">— Example 2.3.10, p.58</span>
+    </div>
+
+    <p>設定:</p>
+    <ul style="color:var(--ink-soft); padding-left:24px; margin-bottom:18px;">
+      <li><code>p<sub>0</sub></code> = 一個<em>無辜</em>者有六指的機率</li>
+      <li><code>p<sub>1</sub></code> = <em>真兇</em>有六指的機率(<code>p<sub>0</sub> &lt; p<sub>1</sub></code>;目擊者不必 100% 準,所以 <code>p<sub>1</sub></code> 可小於 1)</li>
+      <li><code>a = p<sub>0</sub>/p<sub>1</sub></code>,<code>b = (1 − p<sub>1</sub>)/(1 − p<sub>0</sub>)</code></li>
+    </ul>
+
+    <p>Rugen 住在這國,被檢查出右手有六指。</p>
+
+    <h3>(a) Rugen 是兇手的機率?</h3>
+
+    <p>設 <code class="post-tone">R</code> = Rugen 是兇手,<code class="b-tone">M</code> = Rugen 有六指。Prior <code>P(R) = 1/n</code>(每人等可能)。</p>
+
+    <div class="derive">
+      <div class="row step-shown">
+        <span class="lhs post">P(R|M)</span>
+        <span class="eq">=</span>
+        <span class="frac">
+          <span><span class="blue">P(M|R)</span> · <span class="gold">P(R)</span></span>
+          <span><span class="blue">P(M|R)P(R)</span> + <span class="blue">P(M|R<sup>c</sup>)P(R<sup>c</sup>)</span></span>
+        </span>
+        <span class="note">Bayes + LOTP 切 {R, R<sup>c</sup>}</span>
+      </div>
+      <div class="row step-shown">
+        <span class="eq">=</span>
+        <span class="frac">
+          <span>p<sub>1</sub> · (1/n)</span>
+          <span>p<sub>1</sub> · (1/n) + p<sub>0</sub> · (1 − 1/n)</span>
+        </span>
+      </div>
+      <div class="row step-shown result">
+        <span class="eq">=</span>
+        <span class="ans">1 / (1 + a(n − 1))</span>
+        <span class="note">其中 a = p<sub>0</sub>/p<sub>1</sub></span>
+      </div>
+    </div>
+
+    <p><strong>幾何直覺:</strong>若 a 很小(無辜者極少六指),分母接近 1,後驗接近 1 — 證據強。若 a 接近 1(誰都可能六指),(n − 1) 個無辜者各自有 a 倍的機會湊出六指,把 Rugen 淹沒。</p>
+
+    <h3>(b) 多一條證據:全國只有 Rugen 一個六指</h3>
+
+    <p>設 <code>N</code> = 其他 n − 1 個男人都<strong>沒有</strong>六指。新證據是 M ∩ N。書中算出:</p>
+
+    <div class="formula-hero" style="font-size: clamp(1.1rem, 3vw, 1.6rem);">
+      <span class="post">P(R|M, N)</span>
+      <span class="eq">=</span>
+      <span class="frac">
+        <span>1</span>
+        <span>1 + a · b · (n − 1)</span>
+      </span>
+    </div>
+
+    <p>其中 <code>b = (1 − p<sub>1</sub>)/(1 − p<sub>0</sub>) &lt; 1</code>(因為 <code>p<sub>1</sub> &gt; p<sub>0</sub></code>)。多了一條獨立證據 — 別人都沒六指 — 把分母多乘了一個 <code>b &lt; 1</code>,後驗<strong>變大</strong>。直覺對:獨家六指比起「至少有一個六指」是更強的證據。</p>
+
+    <h3>玩玩參數</h3>
+
+    <div class="sixf-stage">
+      <div class="slider-row">
+        <label>p<sub>0</sub>(無辜者六指)</label>
+        <input type="range" id="p0-slider" min="0.0001" max="0.1" step="0.0001" value="0.001">
+        <span class="val" id="p0-val">0.001</span>
+      </div>
+      <div class="slider-row">
+        <label>p<sub>1</sub>(真兇六指)</label>
+        <input type="range" id="p1-slider" min="0.01" max="1.0" step="0.01" value="0.99">
+        <span class="val" id="p1-val">0.99</span>
+      </div>
+      <div class="slider-row">
+        <label>n(全國人口)</label>
+        <input type="range" id="n-slider" min="2" max="10000" step="1" value="1000">
+        <span class="val" id="n-val">1000</span>
+      </div>
+
+      <div class="sixf-result">
+        <span>(a) 只知 Rugen 六指 → <span class="lhs">P(R|M)</span> = <span class="ans" id="ans-a">—</span></span>
+        <div class="sixf-bar"><div class="sixf-bar-fill" id="bar-a" style="width:0%;"></div></div>
+        <span style="margin-top:10px;display:inline-block;">(b) 加上「只有 Rugen 六指」 → <span class="lhs">P(R|M,N)</span> = <span class="ans" id="ans-b">—</span></span>
+        <div class="sixf-bar"><div class="sixf-bar-fill" id="bar-b" style="width:0%;"></div></div>
+        <span class="small" id="sixf-explain">a = p₀/p₁ = —;b = (1−p₁)/(1−p₀) = —</span>
+      </div>
+    </div>
+
+    <p><strong>觀察:</strong>n 越大,(a) 被無辜者稀釋得越厲害,P(R|M) 越低;但 (b) 多一條 N 的證據後,即使 n 很大,後驗也能維持高。「獨家證據」的訊息量遠大於「擁有特徵」。</p>
+  </section>
+
+  <!-- ============ FINALE ============ -->
+  <section class="stage finale" id="s8">
+    <div class="stage-tag">本節收束</div>
+    <h2>把這節串起來</h2>
+
+    <p>條件機率的定義只是一條比值。把它前後左右挪一挪,跑出了本章兩個最重要的工具:</p>
+
+    <div class="recap">
+      <div class="recap-item">
+        <span class="num">2.3.1</span>
+        <p><b>Intersection.</b> <code class="ab-tone">P(A ∩ B) = P(B)P(A|B) = P(A)P(B|A)</code>。把分母搬到另一邊,聯合機率就是條件機率乘上邊際機率。</p>
+      </div>
+      <div class="recap-item">
+        <span class="num">2.3.2</span>
+        <p><b>Chain rule.</b> n 個事件的交集機率可以順著條件鏈逐個拆。<em>選對展開順序</em>常常是省力關鍵。</p>
+      </div>
+      <div class="recap-item">
+        <span class="num">2.3.3</span>
+        <p><b>Bayes' rule.</b> <code class="post-tone">P(A|B) = P(B|A)P(A) / P(B)</code>。把好算的反方向 P(B|A) 翻成想知道的正方向 P(A|B)。</p>
+      </div>
+      <div class="recap-item">
+        <span class="num">2.3.5</span>
+        <p><b>Odds form.</b> posterior odds = prior odds × likelihood ratio。沒有分母,證據加成就是相乘。</p>
+      </div>
+      <div class="recap-item">
+        <span class="num">2.3.6</span>
+        <p><b>LOTP.</b> <code class="b-tone">P(B) = Σ P(B|A<sub>i</sub>)P(A<sub>i</sub>)</code>。切片、各算各的條件機率、加權和。<em>切法是門藝術。</em></p>
+      </div>
+      <div class="recap-item">
+        <span class="num">2.3.8</span>
+        <p><b>Prior ≠ posterior.</b> P(A) 是看資料前的機率,P(A|A) = 1 不代表 P(A) = 1。不要把已經發生的條件灌回 prior 裡。</p>
+      </div>
+    </div>
+
+    <div class="mantra">
+      Bayes' rule turns evidence into a multiplier; LOTP turns a hard probability into a weighted sum.
+      <span class="zh">Bayes 把證據變成乘數,LOTP 把難算機率變成加權和</span>
+    </div>
+
+    <p><strong>三個範例貫穿:</strong>Random coin(直接套 Bayes + LOTP)、Rare disease testing(顯示低 prior 如何壓制強 likelihood)、Six-fingered man(同樣的架構推到一般 n 與多條件)。三題用同一個推理骨架,只是 partition 切法跟代入的數字不同。</p>
+
+    <div class="next-up">
+      <b>下一節 § 2.4 · Conditional probabilities are probabilities</b><br>
+      把 P(·|E) 當成「另一個機率函數」,證明它滿足機率公設。然後就能把目前學過的所有結果,直接搬進條件世界裡用。
+      <span class="formula">P̃(A) = P(A|E)</span>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  Blitzstein &amp; Hwang · Introduction to Probability · §2.3 · 互動式自學
+</footer>
+
+<script>
+/* ---------- progress rail + stage observer ---------- */
+const stages = [...document.querySelectorAll('.stage')];
+const dotsContainer = document.getElementById('dots');
+const railFill = document.getElementById('rail-fill');
+
+stages.forEach((s, i) => {
+  const b = document.createElement('button');
+  b.dataset.idx = i;
+  b.addEventListener('click', () => s.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  dotsContainer.appendChild(b);
+});
+const dots = [...dotsContainer.querySelectorAll('button')];
+
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('visible');
+      const idx = stages.indexOf(e.target);
+      dots.forEach((d, i) => {
+        d.classList.toggle('active', i === idx);
+        d.classList.toggle('done', i < idx);
+      });
+      // notation reveal trigger
+      e.target.querySelectorAll('.notation').forEach(n => n.classList.add('visible'));
+    }
+  });
+}, { threshold: 0.15 });
+stages.forEach(s => obs.observe(s));
+
+window.addEventListener('scroll', () => {
+  const sc = window.scrollY;
+  const max = document.body.scrollHeight - window.innerHeight;
+  railFill.style.width = (sc / max * 100) + '%';
+}, { passive: true });
+
+/* ---------- multi-choice questions ---------- */
+document.querySelectorAll('.q .opts').forEach(opts => {
+  opts.querySelectorAll('.opt').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.classList.contains('locked')) return;
+      const fb = btn.closest('.q').querySelector('[data-fb]');
+      const correct = btn.getAttribute('data-correct') === 'true';
+      opts.querySelectorAll('.opt').forEach(o => {
+        o.classList.add('locked');
+        if (o.getAttribute('data-correct') === 'true') {
+          o.classList.add('correct');
+          o.insertAdjacentHTML('beforeend', '<span class="mark" style="color:var(--good)">✓</span>');
+        }
+      });
+      if (!correct) {
+        btn.classList.add('wrong');
+        btn.insertAdjacentHTML('beforeend', '<span class="mark" style="color:var(--bad)">✕</span>');
+      }
+      fb && fb.classList.add('show');
+    });
+  });
+});
+
+/* ---------- reflection reveal ---------- */
+document.querySelectorAll('[data-reveal]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const fb = btn.closest('.q').querySelector('[data-fb]');
+    fb.classList.add('show');
+    btn.disabled = true;
+    btn.textContent = '已展開 ✓';
+  });
+});
+
+/* ---------- LOTP partition diagram ---------- */
+const lotpControls = document.getElementById('lotp-controls');
+const lotpCaption = document.getElementById('lotp-caption');
+const lotpSvg = document.getElementById('lotp-svg');
+const bShape = document.getElementById('b-shape');
+const intersections = document.getElementById('intersections');
+const ipartList = [...intersections.querySelectorAll('.ipart')];
+
+const lotpCaptions = [
+  '樣本空間 <b>S</b> 被切成 <span class="gold">A₁, …, A₆</span> 六片,互斥且窮盡。事件 <b>B</b>(灰色輪廓)橫跨在這些切片之上。',
+  '把 <b>B</b> 拆成六塊 <span class="green">B ∩ A<sub>i</sub></span>。它們互不相交,且聯集就是 B。',
+  '<b>P(B) = Σ P(B ∩ A<sub>i</sub>) = Σ P(B|A<sub>i</sub>)P(A<sub>i</sub>)</b>。Thm 2.3.1 把每塊的機率拆成「在這片內 B 發生的條件機率」乘上「這片本身的機率」。'
+];
+
+function setLotpStep(step) {
+  lotpControls.querySelectorAll('button').forEach(b => {
+    b.classList.toggle('active', +b.dataset.step === step);
+  });
+  lotpCaption.innerHTML = lotpCaptions[step];
+
+  if (step === 0) {
+    intersections.style.transition = 'opacity 0.5s';
+    intersections.style.opacity = 0;
+    bShape.style.transition = 'all 0.5s';
+    bShape.style.stroke = 'var(--ink)';
+    bShape.style.strokeDasharray = '0';
+  } else if (step === 1) {
+    intersections.style.transition = 'opacity 0.6s';
+    intersections.style.opacity = 1;
+    bShape.style.stroke = 'var(--ink-soft)';
+    bShape.style.strokeDasharray = '4 4';
+    ipartList.forEach((p, i) => {
+      p.style.transition = 'transform 0.5s ease ' + (i * 0.08) + 's';
+      p.style.transformOrigin = '300px 110px';
+      p.style.transform = 'scale(1)';
+    });
+  } else if (step === 2) {
+    intersections.style.opacity = 1;
+    bShape.style.stroke = 'var(--ink)';
+    bShape.style.strokeDasharray = '0';
+    ipartList.forEach((p, i) => {
+      p.style.transition = 'opacity 0.4s ease ' + (i * 0.05) + 's';
+      p.style.opacity = 1;
+    });
+  }
+}
+lotpControls.querySelectorAll('button').forEach(b => {
+  b.addEventListener('click', () => setLotpStep(+b.dataset.step));
+});
+setLotpStep(0);
+
+/* ---------- Coin example step reveal ---------- */
+const coinRows = [...document.querySelectorAll('#coin-derive .row')];
+const coinBtn = document.getElementById('coin-step-btn');
+const coinReset = document.getElementById('coin-reset-btn');
+let coinStep = 1;
+
+function updateCoinBtn() {
+  if (coinStep >= 4) {
+    coinBtn.textContent = '已完整展開 ✓';
+    coinBtn.disabled = true;
+  } else {
+    coinBtn.textContent = '下一步 ▸';
+    coinBtn.disabled = false;
+  }
+}
+
+coinBtn.addEventListener('click', () => {
+  if (coinStep >= 4) return;
+  coinStep++;
+  const row = document.querySelector(`#coin-derive .row[data-step="${coinStep}"]`);
+  if (row) {
+    row.classList.remove('step-hidden');
+    row.classList.add('step-shown');
+  }
+  updateCoinBtn();
+});
+
+coinReset.addEventListener('click', () => {
+  coinStep = 1;
+  coinRows.forEach(r => {
+    const s = +r.dataset.step;
+    if (s > 1) {
+      r.classList.add('step-hidden');
+      r.classList.remove('step-shown');
+    }
+  });
+  updateCoinBtn();
+});
+
+/* ---------- Disease testing sliders ---------- */
+const priorSlider = document.getElementById('prior-slider');
+const accSlider = document.getElementById('acc-slider');
+const priorVal = document.getElementById('prior-val');
+const accVal = document.getElementById('acc-val');
+const tpEl = document.getElementById('tp-count');
+const fnEl = document.getElementById('fn-count');
+const fpEl = document.getElementById('fp-count');
+const tnEl = document.getElementById('tn-count');
+const diseaseResult = document.getElementById('disease-result');
+
+function updateDisease() {
+  const p = parseFloat(priorSlider.value);
+  const a = parseFloat(accSlider.value);
+  priorVal.textContent = (p * 100).toFixed(1) + '%';
+  accVal.textContent = (a * 100).toFixed(1) + '%';
+
+  const N = 10000;
+  const diseased = N * p;
+  const healthy = N - diseased;
+  const tp = diseased * a;
+  const fn = diseased - tp;
+  const fp = healthy * (1 - a);
+  const tn = healthy - fp;
+
+  tpEl.textContent = tp >= 10 ? Math.round(tp) : tp.toFixed(1);
+  fnEl.textContent = fn >= 10 ? Math.round(fn) : fn.toFixed(1);
+  fpEl.textContent = fp >= 10 ? Math.round(fp) : fp.toFixed(1);
+  tnEl.textContent = tn >= 10 ? Math.round(tn) : tn.toFixed(1);
+
+  const positives = tp + fp;
+  const ppv = positives > 0 ? tp / positives : 0;
+
+  diseaseResult.innerHTML =
+    '在 10000 人中,測出陽性共 <span class="lhs">' + (positives >= 10 ? Math.round(positives) : positives.toFixed(1)) + '</span> 人(' +
+    (tp >= 10 ? Math.round(tp) : tp.toFixed(1)) + ' 真陽 + ' +
+    (fp >= 10 ? Math.round(fp) : fp.toFixed(1)) + ' 假陽)。<br>' +
+    '其中真的有病者:<span class="lhs">' +
+    (tp >= 10 ? Math.round(tp) : tp.toFixed(1)) + ' / ' +
+    (positives >= 10 ? Math.round(positives) : positives.toFixed(1)) +
+    '</span> → <span class="ans">P(D|T) ≈ ' + ppv.toFixed(3) + '</span>';
+}
+priorSlider.addEventListener('input', updateDisease);
+accSlider.addEventListener('input', updateDisease);
+updateDisease();
+
+/* ---------- Six-fingered man sliders ---------- */
+const p0Slider = document.getElementById('p0-slider');
+const p1Slider = document.getElementById('p1-slider');
+const nSlider = document.getElementById('n-slider');
+const p0Val = document.getElementById('p0-val');
+const p1Val = document.getElementById('p1-val');
+const nVal = document.getElementById('n-val');
+const ansA = document.getElementById('ans-a');
+const ansB = document.getElementById('ans-b');
+const barA = document.getElementById('bar-a');
+const barB = document.getElementById('bar-b');
+const sixfExplain = document.getElementById('sixf-explain');
+
+function updateSixf() {
+  let p0 = parseFloat(p0Slider.value);
+  let p1 = parseFloat(p1Slider.value);
+  const n = parseInt(nSlider.value);
+
+  // enforce p0 < p1 visually
+  if (p0 >= p1) {
+    p0 = Math.max(0.0001, p1 - 0.01);
+    p0Slider.value = p0;
+  }
+
+  p0Val.textContent = p0.toFixed(4);
+  p1Val.textContent = p1.toFixed(2);
+  nVal.textContent = n;
+
+  const a = p0 / p1;
+  const b = (1 - p1) / (1 - p0);
+
+  const pA = 1 / (1 + a * (n - 1));
+  const pB = 1 / (1 + a * b * (n - 1));
+
+  ansA.textContent = pA.toFixed(4);
+  ansB.textContent = pB.toFixed(4);
+  barA.style.width = (pA * 100) + '%';
+  barB.style.width = (pB * 100) + '%';
+  sixfExplain.innerHTML = 'a = p₀/p₁ = ' + a.toFixed(4) + ';&nbsp; b = (1−p₁)/(1−p₀) = ' + b.toFixed(4) +
+    ';&nbsp; b 越小,額外證據越強';
+}
+p0Slider.addEventListener('input', updateSixf);
+p1Slider.addEventListener('input', updateSixf);
+nSlider.addEventListener('input', updateSixf);
+updateSixf();
+</script>
+</body>
+</html>
