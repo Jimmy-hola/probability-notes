@@ -131,11 +131,42 @@
   }
   .tip b { color: var(--gold); }
 
-  footer {
-    text-align: center; padding: 40px 0 0;
-    border-top: 1px solid var(--line); margin-top: 40px;
-    color: var(--ink-faint); font-size: 0.82rem;
+  /* attribution block */
+  .attribution {
+    margin-top: 32px; padding: 22px 24px;
+    background: var(--bg-soft); border: 1px solid var(--line);
+    border-radius: 10px; font-size: 0.86rem; color: var(--ink-soft);
+    line-height: 1.7;
   }
+  .attribution .attr-title {
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.74rem;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 12px; font-weight: 600;
+  }
+  .attribution p { margin-bottom: 10px; }
+  .attribution p:last-child { margin-bottom: 0; }
+  .attribution .citation {
+    font-family: 'Newsreader', serif; color: var(--ink);
+    padding: 10px 14px; background: var(--bg);
+    border-left: 2px solid var(--gold); border-radius: 0 6px 6px 0;
+    margin: 12px 0; font-size: 0.92rem;
+  }
+  .attribution .citation em { color: var(--gold); font-style: italic; }
+  .attribution code {
+    font-family: 'Spline Sans Mono', monospace; font-size: 0.82rem;
+    color: var(--accent); background: rgba(212,102,58,0.1);
+    padding: 1px 6px; border-radius: 4px;
+  }
+  .attribution a { color: var(--accent); text-decoration: none; }
+  .attribution a:hover { text-decoration: underline; }
+  .attribution strong { color: var(--ink); }
+
+  footer {
+    text-align: center; padding: 24px 0 0;
+    border-top: 1px solid var(--line); margin-top: 32px;
+    color: var(--ink-faint); font-size: 0.78rem; line-height: 1.7;
+  }
+  footer a { text-decoration: none; }
 </style>
 </head>
 <body>
@@ -234,8 +265,24 @@
     在 Safari / Chrome 點右上角「分享」→「加入主畫面」,就能把這個頁面釘在手機桌面,像 App 一樣一鍵開啟。
   </div>
 
+  <div class="attribution">
+    <div class="attr-title">📖 引用聲明 · Attribution</div>
+    <p>本專案改編自以下著作,僅作個人非商業學習用途(fair use):</p>
+    <p class="citation">
+      Blitzstein, Joseph K., and Jessica Hwang. <em>Introduction to Probability</em>.<br>
+      2nd ed., Chapman and Hall/CRC, 2019. ISBN 978-1138369917.
+    </p>
+    <p>書中引文以 <code>SOURCE</code> 標籤標註頁碼;觀念、編排、術語、例題之著作權屬於原作者與出版社。
+    本筆記<strong>不能取代閱讀原書</strong> — 強烈推薦
+    <a href="https://www.amazon.com/Introduction-Probability-Chapman-Statistical-Science/dp/1138369918" target="_blank">購買原書</a>
+    或瀏覽
+    <a href="https://projects.iq.harvard.edu/stat110" target="_blank">作者官方資源(stat110.net)</a>。</p>
+  </div>
+
   <footer>
-    Blitzstein &amp; Hwang, <em>Introduction to Probability</em> · 互動式自學版 · jimmylion
+    Interactive notes © jimmylion (CC BY-NC-SA 4.0) ·
+    Source content © Blitzstein &amp; Hwang / Chapman and Hall/CRC ·
+    <a href="https://github.com/jimmy-hola/probability-notes" target="_blank" style="color:var(--accent)">GitHub</a>
   </footer>
 
 </div>
