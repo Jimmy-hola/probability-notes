@@ -142,8 +142,8 @@ HTML 是**原書內容的忠實互動化**,不是「我重新設計一個教學�
 |---|---|---|---|---|
 | 2 | 2.1 | The importance of thinking conditionally | ✅ 完成 | `Blitzstein/ch02/2-1.html` |
 | 2 | 2.2 | Definition and intuition | ✅ 完成 | `Blitzstein/ch02/2-2.html` |
-| 2 | 2.3 | Bayes' rule and the law of total probability | ⏳ 下一個 | (待產) |
-| 2 | 2.4 | Conditional probabilities are probabilities | – | |
+| 2 | 2.3 | Bayes' rule and the law of total probability | ✅ 完成 | `Blitzstein/ch02/2-3.html` |
+| 2 | 2.4 | Conditional probabilities are probabilities | ⏳ 下一個 | |
 | 2 | 2.5 | Independence of events | – | |
 | 2 | 2.6 | Coherency of Bayes' rule | – | |
 | 2 | 2.7 | Conditioning as a problem-solving tool | – | |
