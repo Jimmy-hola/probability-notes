@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TOEIC 實戰模考 — 答案紙 + 計時器</title>
+<style>
+  :root{
+    --blue:#1763b6; --blue-d:#0e4a8c; --ink:#1f2733; --mut:#6b7686;
+    --line:#d9dee6; --bg:#eef1f4; --card:#ffffff; --sel:#1763b6;
+    --warn:#c0392b; --ok:#1f8a4c; --paper:#fbfaf7;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Noto Sans TC","PingFang TC",system-ui,-apple-system,"Segoe UI",sans-serif;
+    line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1040px;margin:0 auto;padding:20px 16px 80px}
+  header.top{background:linear-gradient(135deg,var(--blue),var(--blue-d));color:#fff;
+    border-radius:14px;padding:20px 22px;margin-bottom:16px;box-shadow:0 6px 22px rgba(14,74,140,.18)}
+  header.top h1{margin:0 0 4px;font-size:22px;letter-spacing:.3px}
+  header.top .sub{opacity:.92;font-size:13.5px}
+  /* rules */
+  .rules{background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:14px 18px;margin-bottom:16px;font-size:13.5px}
+  .rules h2{margin:0 0 8px;font-size:15px;color:var(--blue-d)}
+  .rules ul{margin:6px 0 0;padding-left:20px}
+  .rules li{margin:3px 0}
+  .rules b{color:var(--ink)}
+  /* timer */
+  .timers{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+  .timer{flex:1 1 280px;background:var(--card);border:1px solid var(--line);
+    border-radius:12px;padding:14px 16px}
+  .timer .lab{font-size:13px;color:var(--mut);font-weight:600}
+  .timer .clk{font-variant-numeric:tabular-nums;font-size:42px;font-weight:700;
+    letter-spacing:1px;margin:2px 0 8px;font-family:"Spline Sans Mono",ui-monospace,monospace}
+  .timer.run .clk{color:var(--blue)}
+  .timer.warn .clk{color:var(--warn)}
+  .timer.done .clk{color:var(--warn)}
+  .timer .btns{display:flex;gap:8px}
+  button{font-family:inherit;cursor:pointer;border:1px solid var(--line);
+    background:#fff;color:var(--ink);border-radius:8px;padding:7px 12px;font-size:13px;font-weight:600}
+  button:hover{border-color:var(--blue);color:var(--blue)}
+  button.primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+  button.primary:hover{background:var(--blue-d);color:#fff}
+  /* progress */
+  .progress{position:sticky;top:0;z-index:5;background:var(--bg);
+    padding:8px 0 10px;margin-bottom:6px}
+  .pbar{height:8px;background:#dde3ea;border-radius:99px;overflow:hidden}
+  .pbar > i{display:block;height:100%;width:0;background:var(--ok);transition:width .2s}
+  .pmeta{display:flex;justify-content:space-between;font-size:12.5px;color:var(--mut);margin-top:4px}
+  /* sections */
+  .sec-h{margin:22px 0 8px;font-size:13px;font-weight:800;letter-spacing:2px;color:var(--mut)}
+  .part{background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:12px 14px;margin-bottom:14px}
+  .part h3{margin:2px 0 10px;font-size:15px;color:var(--blue-d);display:flex;
+    align-items:center;gap:8px}
+  .part h3 .rng{font-size:12px;color:var(--mut);font-weight:600}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px 14px}
+  .q{display:flex;align-items:center;gap:6px;padding:3px 4px;border-radius:7px}
+  .q.ans{background:#eef5ff}
+  .q .n{width:30px;text-align:right;font-size:12.5px;color:var(--mut);
+    font-variant-numeric:tabular-nums;font-weight:700}
+  .opt{width:25px;height:25px;border-radius:50%;border:1.5px solid #c4ccd6;background:#fff;
+    color:var(--mut);font-size:12px;font-weight:700;padding:0;display:inline-flex;
+    align-items:center;justify-content:center;transition:.12s}
+  .opt:hover{border-color:var(--blue);color:var(--blue)}
+  .opt.on{background:var(--sel);border-color:var(--sel);color:#fff;box-shadow:0 1px 4px rgba(23,99,182,.4)}
+  /* footer actions */
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+  .out{margin-top:14px}
+  textarea{width:100%;min-height:150px;border:1px solid var(--line);border-radius:10px;
+    padding:12px;font-family:"Spline Sans Mono",ui-monospace,monospace;font-size:13px;
+    background:var(--paper);color:var(--ink);resize:vertical}
+  details{margin-top:14px;background:var(--card);border:1px solid var(--line);
+    border-radius:10px;padding:10px 14px;font-size:13px}
+  summary{cursor:pointer;font-weight:700;color:var(--blue-d)}
+  .hint{font-size:12.5px;color:var(--mut);margin-top:6px}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+    background:var(--ink);color:#fff;padding:10px 18px;border-radius:99px;font-size:13px;
+    opacity:0;pointer-events:none;transition:.25s}
+  .toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>TOEIC 實戰模考 — 答案紙</h1>
+    <div class="sub">《New TOEIC 一本攻克…850+》實戰模擬試題 ｜ 題本看 PDF、音檔用書上 QR(EZCourse)、答案填這裡</div>
+  </header>
+
+  <div class="rules">
+    <h2>考試規則(請完全比照真實多益)</h2>
+    <ul>
+      <li><b>聽力 45 分鐘 → 不休息 → 閱讀 75 分鐘</b>,全程一氣呵成,共約 2 小時。</li>
+      <li>聽力音檔<b>只播一次、不可回放</b>;Part 3／4 養成「先讀題、再聽音」。</li>
+      <li>全程<b>不查字典、不暫停</b>。<b>每題都要填,絕不留空</b>(多益答錯不倒扣)。</li>
+      <li>閱讀建議配時:<b>Part 5 約 10–12 分</b>、<b>Part 6 約 8 分</b>、<b>Part 7 留約 55 分</b>。</li>
+      <li>題本就用 PDF(實戰模擬試題從書頁 p.206 起);<b>不要翻到解析/答案那幾頁</b>。</li>
+    </ul>
+  </div>
+
+  <div class="timers">
+    <div class="timer" id="tLC">
+      <div class="lab">聽力 LISTENING</div>
+      <div class="clk" data-clk>45:00</div>
+      <div class="btns">
+        <button class="primary" data-act="start">開始</button>
+        <button data-act="pause">暫停</button>
+        <button data-act="reset">重設</button>
+      </div>
+    </div>
+    <div class="timer" id="tRC">
+      <div class="lab">閱讀 READING</div>
+      <div class="clk" data-clk>75:00</div>
+      <div class="btns">
+        <button class="primary" data-act="start">開始</button>
+        <button data-act="pause">暫停</button>
+        <button data-act="reset">重設</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="progress">
+    <div class="pbar"><i id="pfill"></i></div>
+    <div class="pmeta"><span id="pcount">已作答 0 / 200</span><span id="pblank">空白 200</span></div>
+  </div>
+
+  <div id="sheet"></div>
+
+  <div class="actions">
+    <button class="primary" id="btnOut">產生我的作答(貼回給 Claude)</button>
+    <button id="btnCopy">複製</button>
+    <button id="btnClear">清除全部作答</button>
+  </div>
+
+  <div class="out">
+    <textarea id="outBox" placeholder="按上面「產生我的作答」後,結果會出現在這裡 → 全選複製 → 貼回對話給我批改。"></textarea>
+  </div>
+
+  <details>
+    <summary>不想開網頁?也可以用純文字作答格(點開複製)</summary>
+    <p class="hint">把每題的字母填在冒號後(例:<code>1:B</code>),Part 2 只有 A/B/C。填好整段貼回給我即可。</p>
+    <textarea id="plainBox" readonly></textarea>
+  </details>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const PARTS=[
+  {sec:'LC',no:1,name:'Part 1 — 照片描述',s:1,e:6,opts:['A','B','C','D']},
+  {sec:'LC',no:2,name:'Part 2 — 應答問題',s:7,e:31,opts:['A','B','C']},
+  {sec:'LC',no:3,name:'Part 3 — 簡短對話',s:32,e:70,opts:['A','B','C','D']},
+  {sec:'LC',no:4,name:'Part 4 — 簡短獨白',s:71,e:100,opts:['A','B','C','D']},
+  {sec:'RC',no:5,name:'Part 5 — 句子填空',s:101,e:130,opts:['A','B','C','D']},
+  {sec:'RC',no:6,name:'Part 6 — 段落填空',s:131,e:146,opts:['A','B','C','D']},
+  {sec:'RC',no:7,name:'Part 7 — 閱讀理解',s:147,e:200,opts:['A','B','C','D']},
+];
+const KEY='toeic_mock_answers_v1';
+let ans=JSON.parse(localStorage.getItem(KEY)||'{}');
+const optsOf=n=>{for(const p of PARTS)if(n>=p.s&&n<=p.e)return p.opts;return['A','B','C','D'];};
+
+// build sheet
+const sheet=document.getElementById('sheet');
+let curSec='';
+for(const p of PARTS){
+  if(p.sec!==curSec){curSec=p.sec;
+    const h=document.createElement('div');h.className='sec-h';
+    h.textContent=p.sec==='LC'?'■ LISTENING TEST(聽力 100 題 / 45 分)':'■ READING TEST(閱讀 100 題 / 75 分)';
+    sheet.appendChild(h);}
+  const box=document.createElement('div');box.className='part';
+  box.innerHTML=`<h3>${p.name}<span class="rng">第 ${p.s}–${p.e} 題</span></h3>`;
+  const g=document.createElement('div');g.className='grid';
+  for(let n=p.s;n<=p.e;n++){
+    const q=document.createElement('div');q.className='q';q.id='q'+n;
+    let html=`<span class="n">${n}.</span>`;
+    for(const o of p.opts)html+=`<button class="opt" data-n="${n}" data-o="${o}">${o}</button>`;
+    q.innerHTML=html;g.appendChild(q);
+  }
+  box.appendChild(g);sheet.appendChild(box);
+}
+
+// click handling (toggle)
+sheet.addEventListener('click',e=>{
+  const b=e.target.closest('.opt');if(!b)return;
+  const n=b.dataset.n,o=b.dataset.o;
+  if(ans[n]===o)delete ans[n];else ans[n]=o;
+  save();render(n);
+});
+function render(n){
+  const q=document.getElementById('q'+n);
+  q.classList.toggle('ans',!!ans[n]);
+  q.querySelectorAll('.opt').forEach(b=>b.classList.toggle('on',ans[b.dataset.n]===b.dataset.o));
+  updateProgress();
+}
+function renderAll(){for(let n=1;n<=200;n++)render(n);}
+function save(){localStorage.setItem(KEY,JSON.stringify(ans));}
+function updateProgress(){
+  const done=Object.keys(ans).filter(k=>ans[k]).length;
+  document.getElementById('pcount').textContent=`已作答 ${done} / 200`;
+  document.getElementById('pblank').textContent=`空白 ${200-done}`;
+  document.getElementById('pfill').style.width=(done/200*100)+'%';
+}
+
+// export
+function buildOutput(){
+  const done=Object.keys(ans).filter(k=>ans[k]).length;
+  let lines=['# TOEIC 實戰模考 — 我的作答',`# 已作答 ${done}/200(空白 ${200-done})`];
+  for(const sec of ['LC','RC']){
+    lines.push(sec==='LC'?'[LISTENING]':'[READING]');
+    const ps=PARTS.filter(p=>p.sec===sec);
+    const lo=ps[0].s, hi=ps[ps.length-1].e;
+    let row=[];
+    for(let n=lo;n<=hi;n++){
+      row.push(`${n}:${ans[n]||'-'}`);
+      if(row.length===10){lines.push(row.join(' '));row=[];}
+    }
+    if(row.length)lines.push(row.join(' '));
+  }
+  return lines.join('\n');
+}
+document.getElementById('btnOut').addEventListener('click',()=>{
+  document.getElementById('outBox').value=buildOutput();
+  document.getElementById('outBox').scrollIntoView({behavior:'smooth',block:'center'});
+  toast('已產生 ✓ 全選複製後貼回對話');
+});
+document.getElementById('btnCopy').addEventListener('click',async()=>{
+  const t=document.getElementById('outBox');if(!t.value)t.value=buildOutput();
+  t.select();
+  try{await navigator.clipboard.writeText(t.value);toast('已複製到剪貼簿 ✓');}
+  catch(_){document.execCommand('copy');toast('已複製 ✓');}
+});
+document.getElementById('btnClear').addEventListener('click',()=>{
+  if(!confirm('確定清除全部作答?此動作無法復原。'))return;
+  ans={};save();renderAll();document.getElementById('outBox').value='';toast('已清除');
+});
+
+// plain text template
+(function(){
+  let lines=['# TOEIC 實戰模考作答(把字母填在冒號後,Part 2 只有 A/B/C)','[LISTENING]'];
+  const push=(lo,hi)=>{let row=[];for(let n=lo;n<=hi;n++){row.push(`${n}:_`);if(row.length===10){lines.push(row.join(' '));row=[];}}if(row.length)lines.push(row.join(' '));};
+  push(1,100);lines.push('[READING]');push(101,200);
+  document.getElementById('plainBox').value=lines.join('\n');
+})();
+
+// timers
+function setupTimer(elId,minutes){
+  const el=document.getElementById(elId), clk=el.querySelector('[data-clk]');
+  let total=minutes*60, left=total, t=null;
+  const fmt=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+  const draw=()=>{clk.textContent=fmt(left);
+    el.classList.toggle('warn',left<=300&&left>0&&t);
+    if(left<=0){el.classList.add('done');el.classList.remove('run','warn');}};
+  el.querySelector('[data-act=start]').addEventListener('click',()=>{
+    if(t||left<=0)return;el.classList.add('run');
+    t=setInterval(()=>{left--;draw();if(left<=0){clearInterval(t);t=null;
+      toast(elId==='tLC'?'⏰ 聽力時間到 → 直接開始閱讀':'⏰ 閱讀時間到,請停筆並產生作答');}},1000);
+  });
+  el.querySelector('[data-act=pause]').addEventListener('click',()=>{
+    if(t){clearInterval(t);t=null;el.classList.remove('run','warn');}});
+  el.querySelector('[data-act=reset]').addEventListener('click',()=>{
+    clearInterval(t);t=null;left=total;el.className='timer';draw();});
+  draw();
+}
+setupTimer('tLC',45);
+setupTimer('tRC',75);
+
+// toast
+let toastT;
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;
+  el.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),2200);}
+
+renderAll();
+</script>
+</body>
+</html>
